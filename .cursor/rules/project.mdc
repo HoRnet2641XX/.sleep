@@ -1,0 +1,37 @@
+---
+description: .sleep プロジェクト共通の開発ルール
+alwaysApply: true
+---
+
+# .sleep — 睡眠レビュー共有プラットフォーム
+
+## 技術スタック
+- Next.js 14（App Router）
+- TypeScript strict
+- Tailwind CSS
+- Supabase（Auth, PostgreSQL, Storage）
+
+## デザインシステム
+- カラー: ダークネイビー(#0B1120) + ラベンダー(#A98FD8) + アンバー(#F5B83D)
+- 角丸: rounded(8px), rounded-lg(12px), rounded-xl(16px)
+- スペーシング: 8px基準（Tailwindスケール使用）
+- アニメーション: 150ms ease-out(hover), 200-300ms ease-out(transition)
+- コントラスト比: テキスト4.5:1以上
+
+## ディレクトリ構成
+- src/app/ — ページ・ルーティング
+- src/components/ui/ — 汎用UIコンポーネント
+- src/components/features/ — 機能別コンポーネント
+- src/hooks/ — カスタムhooks
+- src/lib/ — ユーティリティ、Supabaseクライアント
+- src/types/ — 型定義
+
+## コンポーネント規約
+- 1ファイル1コンポーネント
+- Props型はコンポーネント直上にtype定義
+- server componentをデフォルトに、クライアント操作が必要な場合のみ "use client"
+- 状態: Default → Hover → Active → Focus → Disabled を考慮
+
+## 医療情報の注意
+- 薬に関するレビューには「個人の感想です」の免責注記を自動表示
+- 医療的アドバイスに該当する表現を避ける

@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ─── Surface ─── */
+    --surface: #0b1120;
+    --surface-card: #131d36;
+    --surface-elevated: #1a2744;
+    --surface-input: #0e1629;
+
+    /* ─── Content ─── */
+    --content: #f0ecfa;
+    --content-secondary: #9ca3b8;
+    --content-muted: #6b7280;
+
+    /* ─── Primary ─── */
+    --primary: #a98fd8;
+    --primary-hover: #c7b8e8;
+
+    /* ─── Accent ─── */
+    --accent: #f5b83d;
+
+    /* ─── Border ─── */
+    --border: #243352;
+    --border-light: #2e4068;
+
+    /* ─── Semantic ─── */
+    --success: #4ade80;
+    --warning: #facc15;
+    --error: #f87171;
+    --info: #60a5fa;
+  }
+
+  /* ─── Base Styles ─── */
+  body {
+    @apply bg-surface text-content antialiased;
+    font-feature-settings: "palt";
+  }
+
+  /* ─── Focus Visible ─── */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+
+  /* ─── Reduced Motion ─── */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* ─── Scrollbar ─── */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-light);
+  }
+}
+
+@layer components {
+  /* ─── カードの共通スタイル ─── */
+  .card {
+    @apply rounded-lg border border-border bg-surface-card p-5;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-micro;
+  }
+
+  .card-hover:hover {
+    @apply -translate-y-0.5;
+    border-color: rgba(169, 143, 216, 0.25);
+  }
+
+  /* ─── ボタンバリアント ─── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-micro;
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-white;
+  }
+
+  .btn-primary:hover {
+    @apply bg-primary-hover;
+  }
+
+  .btn-secondary {
+    @apply btn border border-border bg-transparent text-content-secondary;
+  }
+
+  .btn-secondary:hover {
+    @apply border-border-light bg-surface-elevated;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-content-secondary;
+  }
+
+  .btn-ghost:hover {
+    @apply bg-surface-elevated;
+  }
+
+  .btn-destructive {
+    @apply btn bg-error text-white;
+  }
+
+  /* ─── バッジ ─── */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  /* ─── 入力フィールド ─── */
+  .input {
+    @apply w-full rounded-lg border border-border bg-surface-input px-4 py-3 text-base text-content outline-none transition-colors duration-micro;
+    @apply placeholder:text-content-muted;
+    @apply focus:border-primary;
+  }
+}
