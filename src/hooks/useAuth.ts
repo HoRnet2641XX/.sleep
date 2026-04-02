@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import type { User, AuthError } from "@supabase/supabase-js";
+import type { User, AuthError, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import React from "react";
 
@@ -16,6 +16,7 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signInWithOAuth: (provider: Provider) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -30,12 +31,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    // 初回ロード時にセッション取得
     supabase.auth.getSession().then(({ data: { session } }) => {
       setState((prev) => ({ ...prev, user: session?.user ?? null, loading: false }));
     });
 
-    // セッション変更を監視
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -56,7 +55,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = useCallback(async (email: string, password: string) => {
     setState((prev) => ({ ...prev, error: null }));
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) {
+      setState((prev) => ({ ...prev, error }));
+    }
+    return { error };
+  }, []);
+
+  const signInWithOAuth = useCallback(async (provider: Provider) => {
+    setState((prev) => ({ ...prev, error: null }));
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
     if (error) {
       setState((prev) => ({ ...prev, error }));
     }
@@ -72,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ...state,
     signIn,
     signUp,
+    signInWithOAuth,
     signOut,
   };
 
