@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useProfile } from "@/hooks/useProfile";
+import { useFollow, useFollowCounts } from "@/hooks/useFollow";
 import { ProfileHeader } from "@/components/features/ProfileHeader";
 import { BodyInfoCard } from "@/components/features/BodyInfoCard";
 import { SleepInfoCard } from "@/components/features/SleepInfoCard";
+import { FollowButton } from "@/components/ui/FollowButton";
 import { CategoryBadge } from "@/components/ui/Badge";
 import { StarRating } from "@/components/ui/StarRating";
 import type { Review } from "@/types";
@@ -52,6 +54,8 @@ export default function ProfilePage({
   const router = useRouter();
   const { profile, reviews, totalLikes, isOwnProfile, loading, error } =
     useProfile(params.id);
+  const { isFollowing, loading: followLoading, toggleFollow } = useFollow(params.id);
+  const { followersCount, followingCount } = useFollowCounts(params.id);
 
   return (
     <>
@@ -103,7 +107,18 @@ export default function ProfilePage({
               profile={profile}
               reviewCount={reviews.length}
               totalLikes={totalLikes}
+              followersCount={followersCount}
+              followingCount={followingCount}
             />
+            {!isOwnProfile && (
+              <div className="flex justify-center">
+                <FollowButton
+                  isFollowing={isFollowing}
+                  loading={followLoading}
+                  onToggle={toggleFollow}
+                />
+              </div>
+            )}
             <BodyInfoCard profile={profile} />
             <SleepInfoCard profile={profile} />
 

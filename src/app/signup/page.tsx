@@ -129,7 +129,7 @@ export default function SignupPage() {
     router.push("/auth/verify");
   };
 
-  const handleOAuth = async (provider: "google" | "twitter") => {
+  const handleOAuth = async (provider: "google" | "x") => {
     setOauthLoading(provider);
     await signInWithOAuth(provider);
   };
@@ -144,20 +144,8 @@ export default function SignupPage() {
       >
         {/* ロゴ */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <svg
-            className="h-10 w-10"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#F5B83D"
-            strokeWidth="1.5"
-            aria-hidden="true"
-          >
-            <path
-              d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-              fill="rgba(245,184,61,0.12)"
-            />
-          </svg>
-          <span className="text-2xl font-bold tracking-tight text-content">.sleep</span>
+          <img src="/mascot.svg" alt=".nemuri マスコット" className="h-12 w-12" />
+          <span className="text-2xl font-bold tracking-tight text-content">.nemuri</span>
           <p className="text-sm text-content-secondary">眠れない夜を、ひとりにしない</p>
         </div>
 
@@ -184,10 +172,10 @@ export default function SignupPage() {
             <button
               type="button"
               className="btn btn-secondary w-full"
-              onClick={() => handleOAuth("twitter")}
+              onClick={() => handleOAuth("x")}
               disabled={oauthLoading !== null}
             >
-              {oauthLoading === "twitter" ? (
+              {oauthLoading === "x" ? (
                 <Spinner />
               ) : (
                 <XIcon className="h-4 w-4" />

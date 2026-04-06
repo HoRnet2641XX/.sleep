@@ -97,6 +97,14 @@ export type Bookmark = {
   createdAt: string;
 };
 
+// ─── フォロー ───
+export type Follow = {
+  id: string;
+  followerId: string;
+  followingId: string;
+  createdAt: string;
+};
+
 // ─── フォーム用 ───
 export type ReviewFormData = {
   category: ReviewCategory | "";

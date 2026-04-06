@@ -38,7 +38,7 @@ function SetupForm() {
 
         if (error) throw error;
 
-        router.push("/");
+        router.push("/onboarding");
         return true;
       } catch {
         setSubmitError("プロフィールの保存に失敗しました。もう一度お試しください");

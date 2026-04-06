@@ -3,11 +3,11 @@ import "@/styles/globals.css";
 import { Providers } from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: ".sleep — 眠れない夜を、ひとりにしない",
+  title: ".nemuri — 眠れない夜を、ひとりにしない",
   description:
     "睡眠障害を抱える人同士が「自分に効いたもの」を共有し合うプラットフォーム。薬・寝具・生活習慣のリアルなレビューが集まる場所。",
   openGraph: {
-    title: ".sleep — 眠れない夜を、ひとりにしない",
+    title: ".nemuri — 眠れない夜を、ひとりにしない",
     description:
       "睡眠障害を抱える人同士が「自分に効いたもの」を共有し合うプラットフォーム。",
     type: "website",

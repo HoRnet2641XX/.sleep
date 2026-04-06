@@ -31,20 +31,8 @@ export default function VerifyPage() {
 
         {/* ロゴ */}
         <div className="mb-6 flex items-center justify-center gap-2">
-          <svg
-            className="h-6 w-6"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#F5B83D"
-            strokeWidth="1.5"
-            aria-hidden="true"
-          >
-            <path
-              d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-              fill="rgba(245,184,61,0.12)"
-            />
-          </svg>
-          <span className="text-xl font-bold tracking-tight text-content">.sleep</span>
+          <img src="/mascot.svg" alt=".nemuri マスコット" className="h-8 w-8" />
+          <span className="text-xl font-bold tracking-tight text-content">.nemuri</span>
         </div>
 
         {/* メッセージ */}
