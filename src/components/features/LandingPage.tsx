@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { mapRow } from "@/components/features/HomeFeed";
@@ -9,10 +10,56 @@ import type { ReviewWithUser } from "@/types";
 import { CATEGORY_LABELS, EFFECT_LABELS } from "@/types";
 import { StarRating } from "@/components/ui/StarRating";
 
+// three.js は SSR 不可 → クライアント側のみで読み込み
+const HeroSleepScene = dynamic(
+  () => import("@/components/features/HeroSleepScene").then((m) => m.HeroSleepScene),
+  { ssr: false },
+);
+
 const fadeInUp = {
   hidden: { opacity: 0, y: 32 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } },
 };
+
+/** 脳波風の睡眠ウェーブ（ゆるやかに流れる） */
+function SleepWave() {
+  return (
+    <svg
+      viewBox="0 0 400 40"
+      className="mx-auto mb-8 h-8 w-full max-w-[280px] opacity-80"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#b89cff" stopOpacity="0" />
+          <stop offset="20%" stopColor="#b89cff" stopOpacity="0.9" />
+          <stop offset="80%" stopColor="#ffd27a" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#ffd27a" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <motion.path
+        d="M0 20 Q 25 8 50 20 T 100 20 T 150 20 T 200 20 T 250 20 T 300 20 T 350 20 T 400 20"
+        fill="none"
+        stroke="url(#wave-grad)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        animate={{
+          d: [
+            "M0 20 Q 25 8 50 20 T 100 20 T 150 20 T 200 20 T 250 20 T 300 20 T 350 20 T 400 20",
+            "M0 20 Q 25 32 50 20 T 100 20 T 150 12 T 200 28 T 250 16 T 300 24 T 350 20 T 400 20",
+            "M0 20 Q 25 14 50 20 T 100 24 T 150 18 T 200 20 T 250 22 T 300 16 T 350 20 T 400 20",
+            "M0 20 Q 25 8 50 20 T 100 20 T 150 20 T 200 20 T 250 20 T 300 20 T 350 20 T 400 20",
+          ],
+        }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+    </svg>
+  );
+}
 
 /** レビューアイコン SVG */
 function ReviewIcon({ className }: { className?: string }) {
@@ -95,43 +142,158 @@ export function LandingPage() {
       </header>
 
       {/* ─── Hero ─── */}
-      <section className="relative z-10 mx-auto max-w-content px-4 pb-16 pt-16 text-center">
+      <section className="relative overflow-hidden">
+        {/* three.js 夢のパーティクルシーン */}
+        <div className="pointer-events-none absolute inset-0">
+          <HeroSleepScene />
+        </div>
+
+        {/* 月光グロー */}
         <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            visible: { transition: { staggerChildren: 0.15 } },
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-24 h-64 w-64 -translate-x-1/2 rounded-full blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(184,156,255,0.35) 0%, rgba(255,210,122,0.12) 40%, transparent 70%)",
           }}
-        >
-          <motion.div variants={fadeInUp}>
-            <img src="/mascot.svg" alt=".nemuri マスコット" className="mx-auto mb-6 h-24 w-24" />
-          </motion.div>
+          animate={{
+            opacity: [0.6, 1, 0.6],
+            scale: [0.95, 1.05, 0.95],
+          }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        />
 
-          <motion.h1
-            variants={fadeInUp}
-            className="mb-4 text-4xl font-bold leading-tight text-content"
+        <div className="relative z-10 mx-auto max-w-content px-4 pb-20 pt-20 text-center">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{
+              visible: { transition: { staggerChildren: 0.18, delayChildren: 0.1 } },
+            }}
           >
-            眠れない夜を、
-            <br />
-            ひとりにしない
-          </motion.h1>
+            {/* マスコット：呼吸アニメーション */}
+            <motion.div variants={fadeInUp} className="mb-8">
+              <motion.div
+                animate={{
+                  y: [0, -10, 0],
+                  rotate: [-1.5, 1.5, -1.5],
+                }}
+                transition={{
+                  duration: 5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="relative mx-auto h-28 w-28"
+              >
+                <motion.div
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background:
+                      "radial-gradient(circle, rgba(184,156,255,0.55) 0%, transparent 60%)",
+                  }}
+                  animate={{
+                    scale: [1, 1.25, 1],
+                    opacity: [0.6, 0.9, 0.6],
+                  }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                />
+                <motion.img
+                  src="/mascot.svg"
+                  alt=".nemuri マスコット"
+                  className="relative mx-auto h-28 w-28 drop-shadow-[0_8px_24px_rgba(184,156,255,0.4)]"
+                  animate={{ scale: [1, 1.04, 1] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                />
+              </motion.div>
+            </motion.div>
 
-          <motion.p
-            variants={fadeInUp}
-            className="mx-auto mb-8 max-w-sm text-base leading-relaxed text-content-secondary"
-          >
-            睡眠障害を抱える人同士が「自分に効いたもの」を共有し合う、レビュープラットフォーム。
-          </motion.p>
+            {/* 浮遊する「Z」 */}
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-[58%] top-20 text-2xl font-bold text-primary/50"
+              animate={{
+                y: [0, -30, -60],
+                x: [0, 8, 16],
+                opacity: [0, 0.8, 0],
+                scale: [0.6, 1, 1.3],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeOut",
+                delay: 0.5,
+              }}
+            >
+              z
+            </motion.div>
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-[62%] top-16 text-xl font-bold text-primary/40"
+              animate={{
+                y: [0, -40, -80],
+                x: [0, 12, 24],
+                opacity: [0, 0.7, 0],
+                scale: [0.5, 0.9, 1.2],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeOut",
+                delay: 1.8,
+              }}
+            >
+              z
+            </motion.div>
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-[65%] top-12 text-base font-bold text-primary/30"
+              animate={{
+                y: [0, -50, -100],
+                x: [0, 16, 32],
+                opacity: [0, 0.6, 0],
+                scale: [0.4, 0.8, 1.1],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeOut",
+                delay: 3.1,
+              }}
+            >
+              z
+            </motion.div>
 
-          <motion.div variants={fadeInUp} className="flex flex-col items-center gap-3">
-            <Link href="/signup" className="btn btn-primary px-8 py-3 text-base">
-              無料でアカウント作成
-            </Link>
-            <Link href="/login" className="text-sm text-content-muted hover:text-primary">
-              すでにアカウントをお持ちの方
-            </Link>
+            <motion.h1
+              variants={fadeInUp}
+              className="mb-4 text-4xl font-bold leading-tight tracking-tight text-content"
+            >
+              眠れない夜を、
+              <br />
+              ひとりにしない
+            </motion.h1>
+
+            <motion.div variants={fadeInUp}>
+              <SleepWave />
+            </motion.div>
+
+            <motion.p
+              variants={fadeInUp}
+              className="mx-auto mb-8 max-w-sm text-base leading-relaxed text-content-secondary"
+            >
+              睡眠障害を抱える人同士が「自分に効いたもの」を共有し合う、レビュープラットフォーム。
+            </motion.p>
+
+            <motion.div variants={fadeInUp} className="flex flex-col items-center gap-3">
+              <Link href="/signup" className="btn btn-primary px-8 py-3 text-base shadow-[0_8px_24px_rgba(184,156,255,0.3)]">
+                無料でアカウント作成
+              </Link>
+              <Link href="/login" className="text-sm text-content-muted hover:text-primary">
+                すでにアカウントをお持ちの方
+              </Link>
+            </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
       </section>
 
       {/* ─── 価値提案 ─── */}
