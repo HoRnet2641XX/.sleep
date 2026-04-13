@@ -1,253 +1,88 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import type { ReviewCategory, ReviewWithUser, SleepDisorderType, ComparisonItem } from "@/types";
-import type { EffectLevel, UsagePeriod } from "@/types";
+import { motion, useReducedMotion } from "framer-motion";
+import type { ReviewCategory } from "@/types";
+import { CATEGORY_LABELS } from "@/types";
 import { ReviewCard } from "@/components/features/ReviewCard";
 import { CategoryTabs } from "@/components/features/CategoryTabs";
 import { RecommendationCarousel } from "@/components/features/RecommendationCarousel";
+import { GreetingHeader, getTimeSlot, getAmbientGradient } from "@/components/features/GreetingHeader";
+import { CommunityPulse } from "@/components/features/CommunityPulse";
+import { SleepInsightCard } from "@/components/features/SleepInsightCard";
+import { JournalWidget } from "@/components/features/JournalWidget";
+import { SlideMenu } from "@/components/features/SlideMenu";
+import { MatchNotifications } from "@/components/features/MatchNotifications";
 import { useAuth } from "@/hooks/useAuth";
 import { useRecommendations } from "@/hooks/useRecommendations";
-import { supabase } from "@/lib/supabase";
+import { useCurrentHour } from "@/hooks/useCurrentHour";
+import { useSearch } from "@/hooks/useSearch";
+import { useFeed, type SortKey } from "@/hooks/useFeed";
+import { useInteractions } from "@/hooks/useInteractions";
+import { useHomeInsights } from "@/hooks/useHomeInsights";
+import { useMatchNotifications } from "@/hooks/useMatchNotifications";
 
-type SortKey = "new" | "popular" | "following";
-
-/** DB行 → ReviewWithUser への変換 */
-export function mapRow(row: Record<string, unknown>): ReviewWithUser {
-  const profile = row.profiles as Record<string, unknown>;
-  return {
-    id: row.id as string,
-    userId: row.user_id as string,
-    category: row.category as ReviewCategory,
-    productName: row.product_name as string,
-    rating: row.rating as number,
-    effectLevel: row.effect_level as EffectLevel,
-    usagePeriod: row.usage_period as UsagePeriod,
-    body: row.body as string,
-    imageUrls: (row.image_urls as string[]) ?? [],
-    referenceUrl: (row.reference_url as string) ?? null,
-    comparisonItems: (row.comparison_items as ComparisonItem[]) ?? [],
-    likesCount: row.likes_count as number,
-    commentsCount: row.comments_count as number,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
-    user: {
-      id: profile.id as string,
-      nickname: profile.nickname as string,
-      avatarUrl: (profile.avatar_url as string) ?? null,
-      height: (profile.height as number) ?? null,
-      weight: (profile.weight as number) ?? null,
-      gender: (profile.gender as ReviewWithUser["user"]["gender"]) ?? null,
-      ageGroup: (profile.age_group as string) ?? null,
-      sleepDisorderTypes: (profile.sleep_disorder_types as SleepDisorderType[]) ?? [],
-      cause: (profile.cause as string) ?? null,
-      createdAt: profile.created_at as string,
-      updatedAt: profile.updated_at as string,
-    },
-  };
-}
-
-/** スライドメニュー */
-function SlideMenu({
-  open,
-  onClose,
-  userId,
-  onSignOut,
-}: {
-  open: boolean;
-  onClose: () => void;
-  userId: string;
-  onSignOut: () => void;
-}) {
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-navy-900/60 backdrop-blur-sm"
-            onClick={onClose}
-          />
-          <motion.nav
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="fixed bottom-0 right-0 top-0 z-50 w-72 border-l border-border bg-surface-card"
-            aria-label="ユーザーメニュー"
-          >
-            <div className="flex h-full flex-col">
-              <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                <span className="text-sm font-semibold text-content">メニュー</span>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-lg p-1 text-content-muted hover:bg-surface-elevated hover:text-content"
-                  aria-label="メニューを閉じる"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                    <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto px-3 py-4">
-                <ul className="space-y-1">
-                  <li>
-                    <Link href={`/profile/${userId}`} onClick={onClose} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content">
-                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="12" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                      マイページ
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/profile/edit" onClick={onClose} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content">
-                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                      プロフィール編集
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/post" onClick={onClose} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content">
-                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" strokeLinecap="round" /><line x1="5" y1="12" x2="19" y2="12" strokeLinecap="round" /></svg>
-                      レビューを書く
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div className="border-t border-border px-3 py-4">
-                <button
-                  type="button"
-                  onClick={() => { onClose(); onSignOut(); }}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm text-content-muted transition-colors hover:bg-surface-elevated hover:text-error"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" strokeLinecap="round" strokeLinejoin="round" /><polyline points="16 17 21 12 16 7" strokeLinecap="round" strokeLinejoin="round" /><line x1="21" y1="12" x2="9" y2="12" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  ログアウト
-                </button>
-              </div>
-            </div>
-          </motion.nav>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 24, scale: 0.97 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      delay: i * 0.07,
-      duration: 0.45,
-      ease: [0.22, 1, 0.36, 1] as const,
-    },
-  }),
-};
+/* ─── トレンドアイコン（SVG） ─── */
+const TrendIcon = (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 export function HomeFeed() {
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
   const { user, loading: authLoading, signOut } = useAuth();
   const { recommendations } = useRecommendations();
+  const currentHour = useCurrentHour();
+  const timeSlot = getTimeSlot(currentHour);
+
   const [category, setCategory] = useState<ReviewCategory | "all">("all");
   const [sortBy, setSortBy] = useState<SortKey>("new");
-  const [reviews, setReviews] = useState<ReviewWithUser[]>([]);
-  const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
 
   // 検索
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<ReviewWithUser[]>([]);
-  const [searching, setSearching] = useState(false);
-  const isSearching = searchQuery.trim().length >= 2;
+  const search = useSearch();
 
-  // 検索 debounce
-  useEffect(() => {
-    if (!isSearching) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    const timer = setTimeout(async () => {
-      const q = searchQuery.trim();
-      const { data } = await supabase
-        .from("reviews")
-        .select("*, profiles(*)")
-        .or(`product_name.ilike.%${q}%,body.ilike.%${q}%`)
-        .order("likes_count", { ascending: false })
-        .limit(30);
-      setSearchResults(
-        (data ?? []).map((row) => mapRow(row as Record<string, unknown>)),
-      );
-      setSearching(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery, isSearching]);
+  // フィード
+  const { reviews, setReviews, loading } = useFeed(
+    category,
+    sortBy,
+    user?.id,
+    search.isActive,
+  );
 
-  /** レビュー一覧を取得 */
-  const fetchReviews = useCallback(async () => {
-    setLoading(true);
+  // 表示対象のレビュー
+  const displayReviews = search.isActive ? search.results : reviews;
 
-    // フォロー中フィード
-    if (sortBy === "following" && user) {
-      const { data: followData } = await supabase
-        .from("follows")
-        .select("following_id")
-        .eq("follower_id", user.id);
-      const ids = (followData ?? []).map((f) => f.following_id as string);
-      if (ids.length === 0) {
-        setReviews([]);
-        setLoading(false);
-        return;
-      }
-      let query = supabase
-        .from("reviews")
-        .select("*, profiles(*)")
-        .in("user_id", ids)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (category !== "all") {
-        query = query.eq("category", category);
-      }
-      const { data } = await query;
-      setReviews((data ?? []).map((row) => mapRow(row as Record<string, unknown>)));
-      setLoading(false);
-      return;
-    }
+  // いいね / ブックマーク
+  const { likedIds, savedIds, toggleLike, toggleBookmark } = useInteractions(
+    user?.id,
+    displayReviews,
+    setReviews,
+    search.setResults,
+  );
 
-    let query = supabase.from("reviews").select("*, profiles(*)");
-    if (category !== "all") {
-      query = query.eq("category", category);
-    }
-    if (sortBy === "popular") {
-      query = query.order("likes_count", { ascending: false });
-    } else {
-      query = query.order("created_at", { ascending: false });
-    }
-    query = query.limit(50);
-    const { data } = await query;
-    setReviews((data ?? []).map((row) => mapRow(row as Record<string, unknown>)));
-    setLoading(false);
-  }, [category, sortBy, user]);
+  // コミュニティデータ
+  const { nickname, activeUsers, insight } = useHomeInsights(user?.id);
 
-  useEffect(() => {
-    if (!isSearching) {
-      fetchReviews();
-    }
-  }, [fetchReviews, isSearching]);
+  // マッチング通知
+  const { notifications: matchNotifications } = useMatchNotifications(user?.id);
+
+  // インサイトにアイコンを注入
+  const insightWithIcon = useMemo(
+    () => (insight ? { ...insight, icon: TrendIcon } : null),
+    [insight],
+  );
 
   const handleSignOut = useCallback(async () => {
     await signOut();
     router.refresh();
   }, [signOut, router]);
 
-  const displayReviews = isSearching ? searchResults : reviews;
-  const isLoading = isSearching ? searching : loading;
+  const isLoading = search.isActive ? search.searching : loading;
 
   const sortTabs: { key: SortKey; label: string; authOnly?: boolean }[] = [
     { key: "new", label: "新着" },
@@ -255,15 +90,33 @@ export function HomeFeed() {
     { key: "following", label: "フォロー中", authOnly: true },
   ];
 
+  const cardVariants = shouldReduceMotion
+    ? {
+        hidden: { opacity: 0 },
+        visible: () => ({ opacity: 1, transition: { duration: 0.01 } }),
+      }
+    : {
+        hidden: { opacity: 0, y: 24, scale: 0.97 },
+        visible: (i: number) => ({
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          transition: {
+            delay: i * 0.07,
+            duration: 0.45,
+            ease: [0.22, 1, 0.36, 1] as const,
+          },
+        }),
+      };
+
+  const ambientBg = useMemo(() => getAmbientGradient(timeSlot), [timeSlot]);
+
   return (
     <div className="min-h-screen">
-      {/* 背景のアンビエントグロー */}
+      {/* 背景アンビエントグロー（時間帯連動） */}
       <div
-        className="pointer-events-none fixed inset-x-0 top-0 h-[40vh]"
-        style={{
-          background:
-            "radial-gradient(ellipse at 30% 0%, rgba(169,143,216,0.03) 0%, transparent 60%), radial-gradient(ellipse at 70% 10%, rgba(245,184,61,0.02) 0%, transparent 50%)",
-        }}
+        className="pointer-events-none fixed inset-x-0 top-0 h-[50vh] transition-all duration-[3000ms]"
+        style={{ background: ambientBg }}
       />
 
       {/* ヘッダー */}
@@ -272,7 +125,9 @@ export function HomeFeed() {
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img src="/mascot.svg" alt=".nemuri" className="h-7 w-7" />
-              <span className="text-xl font-bold tracking-tight text-content">.nemuri</span>
+              <span className="text-xl font-bold tracking-tight text-content">
+                .nemuri
+              </span>
             </div>
             <nav className="flex items-center gap-3" aria-label="メインナビゲーション">
               {authLoading ? (
@@ -281,8 +136,10 @@ export function HomeFeed() {
                 <button
                   type="button"
                   onClick={() => setMenuOpen(true)}
-                  className="flex items-center gap-1.5 rounded-lg p-2 text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content"
+                  className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg p-2 text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content"
                   aria-label="メニューを開く"
+                  aria-expanded={menuOpen}
+                  aria-haspopup="dialog"
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                     <line x1="3" y1="6" x2="21" y2="6" strokeLinecap="round" />
@@ -291,7 +148,10 @@ export function HomeFeed() {
                   </svg>
                 </button>
               ) : (
-                <Link href="/login" className="rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20">
+                <Link
+                  href="/login"
+                  className="rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20"
+                >
                   ログイン
                 </Link>
               )}
@@ -299,24 +159,28 @@ export function HomeFeed() {
           </div>
 
           {/* 検索 */}
-          <div className="relative mb-3">
-            <svg className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-content-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <form
+            role="search"
+            onSubmit={(e) => e.preventDefault()}
+            className="relative mb-3"
+          >
+            <svg className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-content-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             <input
               type="search"
               placeholder="薬、マットレス、習慣を検索..."
-              className="input pl-10 pr-9"
+              className="input pl-10 pr-10"
               aria-label="レビューを検索"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={search.query}
+              onChange={(e) => search.setQuery(e.target.value)}
             />
-            {searchQuery && (
+            {search.query && (
               <button
                 type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-0.5 text-content-muted hover:text-content"
+                onClick={() => search.setQuery("")}
+                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-content-muted hover:bg-surface-elevated hover:text-content"
                 aria-label="検索をクリア"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -324,39 +188,83 @@ export function HomeFeed() {
                 </svg>
               </button>
             )}
-          </div>
+          </form>
 
-          {/* カテゴリタブ（検索中は非表示） */}
-          {!isSearching && <CategoryTabs selected={category} onChange={setCategory} />}
+          {!search.isActive && (
+            <CategoryTabs selected={category} onChange={setCategory} />
+          )}
         </div>
       </header>
 
       {/* メインコンテンツ */}
       <main className="relative z-10 mx-auto max-w-content px-4 pb-24 pt-4">
-        {/* レコメンド */}
-        {!isSearching && recommendations.length > 0 && (
+        {/* ── ホーム上部ウィジェット群（検索中は非表示） ── */}
+        {!search.isActive && user && (
+          <>
+            <GreetingHeader nickname={nickname} hour={currentHour} />
+            <CommunityPulse count={activeUsers} />
+            <JournalWidget userId={user.id} />
+          </>
+        )}
+        {!search.isActive && insightWithIcon && (
+          <SleepInsightCard insight={insightWithIcon} />
+        )}
+
+        {/* マッチング通知 */}
+        {!search.isActive && matchNotifications.length > 0 && (
+          <MatchNotifications notifications={matchNotifications} />
+        )}
+
+        {/* クイックナビ */}
+        {!search.isActive && user && (
+          <div className="mb-4 flex gap-2">
+            <Link
+              href="/ranking"
+              className="flex flex-1 items-center gap-2 rounded-lg border border-border/50 bg-surface-card/80 px-4 py-3 text-sm text-content-secondary transition-colors hover:border-primary/20 hover:text-content"
+            >
+              <svg className="h-4 w-4 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                <path d="M8 21h8M12 17v4M6 13l-1.12-7.03A1 1 0 015.87 5h12.26a1 1 0 01.99.97L18 13M6 13h12M6 13l-2 4h16l-2-4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              ランキング
+            </Link>
+            <Link
+              href="/dashboard"
+              className="flex flex-1 items-center gap-2 rounded-lg border border-border/50 bg-surface-card/80 px-4 py-3 text-sm text-content-secondary transition-colors hover:border-primary/20 hover:text-content"
+            >
+              <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 9h18M9 21V9" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              睡眠ダッシュボード
+            </Link>
+          </div>
+        )}
+
+        {!search.isActive && recommendations.length > 0 && (
           <RecommendationCarousel recommendations={recommendations} />
         )}
 
-        {/* ソート or 検索結果ヘッダー */}
-        {isSearching ? (
+        {/* ── ソートタブ or 検索結果ヘッダー ── */}
+        {search.isActive ? (
           <div className="mb-4 pl-1">
-            <p className="text-sm text-content-secondary">
-              {searching
+            <p className="text-sm text-content-secondary" aria-live="polite">
+              {search.searching
                 ? "検索中..."
-                : `${searchResults.length}件の検索結果`}
+                : `${search.results.length}件の検索結果`}
             </p>
           </div>
         ) : (
-          <div className="mb-4 flex gap-4 pl-1">
+          <div className="mb-4 flex gap-4 pl-1" role="tablist" aria-label="並び替え">
             {sortTabs
               .filter((s) => !s.authOnly || user)
               .map((s) => (
                 <button
                   key={s.key}
                   type="button"
+                  role="tab"
+                  aria-selected={sortBy === s.key}
                   onClick={() => setSortBy(s.key)}
-                  className={`border-b-2 pb-1 text-sm transition-colors duration-micro ${
+                  className={`min-h-[32px] border-b-2 pb-1 text-sm transition-colors duration-micro ${
                     sortBy === s.key
                       ? "border-primary font-semibold text-content"
                       : "border-transparent text-content-muted"
@@ -368,7 +276,7 @@ export function HomeFeed() {
           </div>
         )}
 
-        {/* レビューフィード */}
+        {/* ── レビューフィード ── */}
         {isLoading ? (
           <div className="flex flex-col gap-4">
             {[1, 2, 3].map((i) => (
@@ -395,58 +303,30 @@ export function HomeFeed() {
               >
                 <ReviewCard
                   review={review}
+                  liked={likedIds.has(review.id)}
+                  saved={savedIds.has(review.id)}
+                  onToggleLike={() => toggleLike(review.id)}
+                  onToggleSave={() => toggleBookmark(review.id)}
                   onClick={() => router.push(`/review/${review.id}`)}
                 />
               </motion.div>
             ))}
           </div>
         ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
-            className="py-16 text-center text-content-muted"
-          >
-            {isSearching ? (
-              <>
-                <svg className="mx-auto mb-3 h-12 w-12 text-content-muted/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <p className="mb-2 font-medium">見つかりませんでした</p>
-                <p className="text-sm">別のキーワードで検索してみてください</p>
-              </>
-            ) : sortBy === "following" ? (
-              <>
-                <svg className="mx-auto mb-3 h-12 w-12 text-content-muted/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                  <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle cx="9" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round" />
-                  <line x1="19" y1="8" x2="19" y2="14" strokeLinecap="round" />
-                  <line x1="22" y1="11" x2="16" y2="11" strokeLinecap="round" />
-                </svg>
-                <p className="mb-2 font-medium">フォロー中のユーザーがいません</p>
-                <p className="text-sm">気になるレビュアーをフォローしてみましょう</p>
-              </>
-            ) : (
-              <>
-                <svg className="mx-auto mb-3 h-12 w-12 text-content-muted/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-                <p className="mb-2 font-medium">まだレビューがありません</p>
-                <p className="mb-4 text-sm">最初のレビューを投稿してみませんか？</p>
-                <Link
-                  href={user ? "/post" : "/login"}
-                  className="btn btn-primary"
-                >
-                  レビューを書く
-                </Link>
-              </>
-            )}
-          </motion.div>
+          <EmptyState
+            isSearching={search.isActive}
+            sortBy={sortBy}
+            user={!!user}
+            onSwitchToPopular={() => setSortBy("popular")}
+            onSelectCategory={(cat) => {
+              setCategory(cat);
+              setSortBy("popular");
+            }}
+          />
         )}
       </main>
 
-      {/* 投稿FAB */}
+      {/* 投稿 FAB */}
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -474,5 +354,107 @@ export function HomeFeed() {
         />
       )}
     </div>
+  );
+}
+
+/* ──��� 空状態コンポーネント ─── */
+function EmptyState({
+  isSearching,
+  sortBy,
+  user,
+  onSwitchToPopular,
+  onSelectCategory,
+}: {
+  isSearching: boolean;
+  sortBy: SortKey;
+  user: boolean;
+  onSwitchToPopular: () => void;
+  onSelectCategory: (cat: ReviewCategory) => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4 }}
+      className="py-12 text-center"
+    >
+      {isSearching ? (
+        <div className="rounded-xl border border-border/40 bg-surface-card/50 px-6 py-8">
+          <svg className="mx-auto mb-4 h-12 w-12 text-content-muted/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <p className="mb-2 font-medium text-content">見つかりませんでした</p>
+          <p className="text-sm text-content-secondary">
+            別のキーワードで検索してみてください
+          </p>
+        </div>
+      ) : sortBy === "following" ? (
+        <div className="rounded-xl border border-border/40 bg-surface-card/50 px-6 py-8">
+          <svg className="mx-auto mb-4 h-12 w-12 text-content-muted/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="9" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round" />
+            <line x1="19" y1="8" x2="19" y2="14" strokeLinecap="round" />
+            <line x1="22" y1="11" x2="16" y2="11" strokeLinecap="round" />
+          </svg>
+          <p className="mb-2 font-medium text-content">
+            まだ誰もフォローしていません
+          </p>
+          <p className="mb-4 text-sm text-content-secondary">
+            気になる���ビュアーをフォローすると、ここに表示されます
+          </p>
+          <button
+            type="button"
+            onClick={onSwitchToPopular}
+            className="btn-secondary text-sm"
+          >
+            人気のレビューを見る
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border/40 bg-gradient-to-br from-surface-card to-surface-elevated px-6 py-8">
+          <img
+            src="/mascot.svg"
+            alt=""
+            className="mx-auto mb-4 h-16 w-16 opacity-60"
+            aria-hidden="true"
+          />
+          <p className="mb-2 text-lg font-bold text-content">
+            静かな夜を、一緒に過ごしましょう
+          </p>
+          <p className="mb-5 text-sm leading-relaxed text-content-secondary">
+            あなたの眠りの経験が、誰かの夜を変えるかもしれません。
+            <br />
+            最初のレビューを書いてみませんか？
+          </p>
+          <div className="flex flex-col items-center gap-3">
+            <Link
+              href={user ? "/post" : "/login"}
+              className="btn-primary w-full max-w-[240px] text-sm"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19" strokeLinecap="round" />
+                <line x1="5" y1="12" x2="19" y2="12" strokeLinecap="round" />
+              </svg>
+              レビューを書く
+            </Link>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              {(["medicine", "mattress", "pillow", "habit"] as const).map(
+                (cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => onSelectCategory(cat)}
+                    className="rounded-full border border-border/60 bg-surface-elevated/50 px-3 py-1.5 text-xs text-content-secondary transition-colors hover:border-primary/30 hover:text-content"
+                  >
+                    {CATEGORY_LABELS[cat]}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </motion.div>
   );
 }

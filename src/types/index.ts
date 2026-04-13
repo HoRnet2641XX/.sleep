@@ -128,14 +128,6 @@ export const CATEGORY_LABELS: Record<ReviewCategory, string> = {
   habit: "生活習慣",
 };
 
-export const CATEGORY_ICONS: Record<ReviewCategory, string> = {
-  medicine: "💊",
-  mattress: "🛏",
-  pillow: "☁",
-  chair: "🪑",
-  habit: "🌿",
-};
-
 export const EFFECT_LABELS: Record<EffectLevel, string> = {
   none: "なし",
   slight: "少し",

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { mapRow } from "@/components/features/HomeFeed";
+import { mapReviewRow } from "@/lib/mapReview";
 import type { ReviewWithUser } from "@/types";
 
 export function useRecommendations() {
@@ -52,7 +52,7 @@ export function useRecommendations() {
 
       if (reviewData) {
         // RPC のスコア順を維持
-        const mapped = reviewData.map((row) => mapRow(row as Record<string, unknown>));
+        const mapped = reviewData.map((row) => mapReviewRow(row as Record<string, unknown>));
         const ordered = reviewIds
           .map((id: string) => mapped.find((r) => r.id === id))
           .filter(Boolean) as ReviewWithUser[];

@@ -1,5 +1,6 @@
 import type { ReviewCategory, EffectLevel } from "@/types";
-import { CATEGORY_LABELS, CATEGORY_ICONS, EFFECT_LABELS } from "@/types";
+import { CATEGORY_LABELS, EFFECT_LABELS } from "@/types";
+import { CategoryIcon } from "@/components/ui/CategoryIcon";
 
 // ─── カテゴリバッジ ───
 type CategoryBadgeProps = {
@@ -8,8 +9,9 @@ type CategoryBadgeProps = {
 
 export function CategoryBadge({ category }: CategoryBadgeProps) {
   return (
-    <span className="badge bg-primary/10 text-primary">
-      {CATEGORY_ICONS[category]} {CATEGORY_LABELS[category]}
+    <span className="badge inline-flex items-center gap-1 bg-primary/10 text-primary">
+      <CategoryIcon category={category} className="h-3 w-3" />
+      {CATEGORY_LABELS[category]}
     </span>
   );
 }

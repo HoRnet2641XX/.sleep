@@ -83,7 +83,7 @@ const config: Config = {
         mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       fontSize: {
-        xs: ["11px", { lineHeight: "1.4" }],
+        xs: ["12px", { lineHeight: "1.45" }],
         sm: ["13px", { lineHeight: "1.4" }],
         base: ["16px", { lineHeight: "1.6" }],
         lg: ["18px", { lineHeight: "1.5" }],

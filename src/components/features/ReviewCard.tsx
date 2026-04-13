@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
 import type { ReviewWithUser } from "@/types";
 import { PERIOD_LABELS } from "@/types";
 import { Avatar } from "@/components/ui/Avatar";
@@ -12,19 +12,39 @@ import { AnimatedBookmarkButton } from "@/components/ui/AnimatedBookmarkButton";
 type ReviewCardProps = {
   review: ReviewWithUser;
   onClick?: () => void;
+  liked: boolean;
+  saved: boolean;
+  onToggleLike: () => void;
+  onToggleSave: () => void;
 };
 
-export function ReviewCard({ review, onClick }: ReviewCardProps) {
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
-
+export function ReviewCard({
+  review,
+  onClick,
+  liked,
+  saved,
+  onToggleLike,
+  onToggleSave,
+}: ReviewCardProps) {
   const validImages = review.imageUrls.filter((u) => u.trim());
   const comparisonCount = review.comparisonItems.length;
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (!onClick) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick();
+    }
+  };
 
   return (
     <article
       onClick={onClick}
-      className="card-hover cursor-pointer"
+      onKeyDown={handleKeyDown}
+      tabIndex={onClick ? 0 : undefined}
+      role={onClick ? "link" : undefined}
+      aria-label={onClick ? `${review.productName} のレビュー詳細を開く` : undefined}
+      className="card-hover cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {/* ヘッダー: ユーザー情報 + カテゴリ */}
       <div className="mb-4 flex items-center gap-3">
@@ -61,15 +81,18 @@ export function ReviewCard({ review, onClick }: ReviewCardProps) {
       {validImages.length > 0 && (
         <div className="mb-4 flex gap-2 overflow-x-auto" onClick={(e) => e.stopPropagation()}>
           {validImages.slice(0, 4).map((url, i) => (
-            <div key={i} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border">
-              <img
+            <div key={i} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-surface-elevated">
+              <Image
                 src={url}
                 alt={`${review.productName} の画像 ${i + 1}`}
-                className="h-full w-full object-cover"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                fill
+                sizes="64px"
+                loading="lazy"
+                unoptimized
+                className="object-cover"
               />
               {i === 3 && validImages.length > 4 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-navy-900/60 text-xs font-medium text-content">
+                <div className="absolute inset-0 flex items-center justify-center bg-surface/70 text-xs font-medium text-content">
                   +{validImages.length - 4}
                 </div>
               )}
@@ -105,14 +128,14 @@ export function ReviewCard({ review, onClick }: ReviewCardProps) {
       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <AnimatedLikeButton
           liked={liked}
-          count={review.likesCount + (liked ? 1 : 0)}
-          onToggle={() => setLiked(!liked)}
+          count={review.likesCount}
+          onToggle={onToggleLike}
         />
 
         <button
           type="button"
           onClick={onClick}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-content-muted transition-colors duration-micro hover:bg-surface-elevated hover:text-content-secondary"
+          className="flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-content-muted transition-colors duration-micro hover:bg-surface-elevated hover:text-content-secondary"
           aria-label="コメントを見る"
         >
           <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -125,7 +148,7 @@ export function ReviewCard({ review, onClick }: ReviewCardProps) {
 
         <AnimatedBookmarkButton
           bookmarked={saved}
-          onToggle={() => setSaved(!saved)}
+          onToggle={onToggleSave}
           label={false}
         />
       </div>
