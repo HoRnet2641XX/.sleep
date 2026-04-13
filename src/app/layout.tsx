@@ -27,7 +27,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" className="dark">
-      <body className="min-h-screen bg-surface text-content antialiased">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+      </head>
+      <body className="min-h-screen bg-surface text-content antialiased env-safe-area">
         <Providers>{children}</Providers>
       </body>
     </html>

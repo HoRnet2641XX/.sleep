@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">.nemuri</string>
+    <string name="title_activity_main">.nemuri</string>
+    <string name="package_name">com.vmate.nemuri</string>
+    <string name="custom_url_scheme">com.vmate.nemuri</string>
+</resources>
