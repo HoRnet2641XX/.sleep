@@ -60,9 +60,12 @@ export function getAmbientGradient(slot: TimeSlot): string {
 type Props = {
   nickname?: string;
   hour: number;
+  avatarUrl?: string | null;
+  isPremium?: boolean;
+  onAvatarClick?: () => void;
 };
 
-export function GreetingHeader({ nickname, hour }: Props) {
+export function GreetingHeader({ nickname, hour, avatarUrl, isPremium, onAvatarClick }: Props) {
   const slot = getTimeSlot(hour);
   const { message, sub } = TIME_GREETINGS[slot];
   const reduced = useReducedMotion();
@@ -83,12 +86,76 @@ export function GreetingHeader({ nickname, hour }: Props) {
               : "radial-gradient(ellipse at 80% 30%, rgba(169,143,216,0.08) 0%, transparent 60%)",
         }}
       />
-      <div className="relative">
-        <p className="mb-1 text-lg font-bold text-content">
-          {nickname ? `${nickname}さん、` : ""}
-          {message}
-        </p>
-        <p className="text-sm text-content-secondary">{sub}</p>
+      <div className="relative flex items-center gap-4">
+        {/* アバター */}
+        {onAvatarClick && (
+          <button
+            type="button"
+            onClick={onAvatarClick}
+            className="group relative shrink-0"
+            aria-label="プロフィール・設定を開く"
+          >
+            {/* プレミアム時の金色の輝くリング */}
+            {isPremium && (
+              <>
+                <motion.span
+                  aria-hidden="true"
+                  className="absolute -inset-1 rounded-full opacity-60 blur-md"
+                  style={{
+                    background:
+                      "conic-gradient(from 0deg, #F5B83D, #FFE081, #F5B83D, #D49A2A, #FFE081, #F5B83D)",
+                  }}
+                  animate={reduced ? undefined : { rotate: 360 }}
+                  transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                />
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-[-2px] rounded-full"
+                  style={{
+                    background:
+                      "conic-gradient(from 0deg, #F5B83D, #FFE081, #F5B83D, #D49A2A, #FFE081, #F5B83D)",
+                  }}
+                />
+              </>
+            )}
+            <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary/30 to-accent/20 ring-1 ring-border">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-base font-bold text-primary">
+                  {nickname?.trim().charAt(0).toUpperCase() || "?"}
+                </span>
+              )}
+            </span>
+            {/* プレミアム王冠 */}
+            {isPremium && (
+              <motion.span
+                className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-500 shadow-md ring-2 ring-surface"
+                aria-label="プレミアム"
+                animate={reduced ? undefined : { y: [0, -1.5, 0] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 3h14v2H5v-2z" />
+                </svg>
+              </motion.span>
+            )}
+          </button>
+        )}
+
+        {/* 挨拶テキスト */}
+        <div className="min-w-0 flex-1">
+          <p className="mb-1 flex items-center gap-1.5 text-lg font-bold text-content">
+            {nickname ? (
+              <span className={isPremium ? "bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 bg-clip-text text-transparent" : ""}>
+                {nickname}さん、
+              </span>
+            ) : null}
+            <span>{message}</span>
+          </p>
+          <p className="truncate text-sm text-content-secondary">{sub}</p>
+        </div>
       </div>
     </motion.div>
   );

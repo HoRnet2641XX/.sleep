@@ -8,6 +8,89 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import type { Gender, SleepDisorderType } from "@/types";
 
+/** アカウント削除ゾーン */
+function DangerZone({ userId }: { userId: string }) {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setError(null);
+    /* RPC経由で auth.users を削除 (cascade で profiles 等も連動) */
+    const { error: rpcError } = await supabase.rpc("delete_my_account");
+    if (rpcError) {
+      setError(`削除に失敗しました: ${rpcError.message}`);
+      setDeleting(false);
+      return;
+    }
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  };
+
+  return (
+    <section className="mt-12 rounded-2xl border border-error/30 bg-error/5 p-5">
+      <h2 className="mb-2 text-sm font-bold text-error">アカウントを削除</h2>
+      <p className="mb-3 text-xs leading-relaxed text-content-secondary">
+        アカウントとすべてのレビュー・ジャーナル・フォロー関係が削除されます。
+        他のユーザーが投稿したコメントへの返信は匿名化されて残ることがあります。
+        この操作は<strong>取り消せません</strong>。
+      </p>
+
+      {!confirming ? (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="rounded-lg border border-error/40 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/10"
+        >
+          アカウントを削除する
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <label htmlFor="confirm-delete" className="block text-xs text-content-secondary">
+            確認のため「<strong className="text-error">削除します</strong>」と入力してください
+          </label>
+          <input
+            id="confirm-delete"
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            className="input w-full"
+            placeholder="削除します"
+            autoComplete="off"
+          />
+          {error && (
+            <p className="rounded bg-error/10 px-2 py-1.5 text-xs text-error">{error}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setConfirming(false);
+                setConfirmText("");
+                setError(null);
+              }}
+              className="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-content-secondary hover:bg-surface-elevated"
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={confirmText !== "削除します" || deleting}
+              className="flex-1 rounded-lg bg-error px-4 py-2 text-sm font-bold text-white hover:bg-error/90 disabled:opacity-40"
+            >
+              {deleting ? "削除中..." : "完全に削除する"}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** プロフィール編集フォーム */
 function EditForm() {
   const router = useRouter();
@@ -32,6 +115,7 @@ function EditForm() {
         } else {
           setInitialData({
             nickname: (data.nickname as string) ?? "",
+            avatarUrl: (data.avatar_url as string | null) ?? null,
             height: data.height ? String(data.height) : "",
             weight: data.weight ? String(data.weight) : "",
             gender: (data.gender as Gender) ?? null,
@@ -55,6 +139,7 @@ function EditForm() {
           .from("profiles")
           .update({
             nickname: data.nickname,
+            avatar_url: data.avatarUrl,
             height: data.height ? Number(data.height) : null,
             weight: data.weight ? Number(data.weight) : null,
             gender: data.gender,
@@ -133,14 +218,18 @@ function EditForm() {
         )}
 
         {/* フォーム */}
-        {initialData && (
+        {initialData && user && (
           <ProfileForm
             initialData={initialData}
+            userId={user.id}
             onSubmit={handleSubmit}
             submitLabel="保存する"
             submitting={submitting}
           />
         )}
+
+        {/* 危険な操作: アカウント削除 */}
+        {user && <DangerZone userId={user.id} />}
       </div>
     </main>
   );

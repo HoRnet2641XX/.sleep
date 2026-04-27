@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { UserProfile } from "@/types";
 import { GENDER_LABELS } from "@/types";
 import { Avatar } from "@/components/ui/Avatar";
@@ -46,18 +47,24 @@ export function ProfileHeader({
           <span className="text-lg font-bold text-content">{totalLikes}</span>
           <span className="text-xs text-content-muted">いいね</span>
         </div>
-        <div className="flex flex-col items-center gap-1 border-r border-border py-4">
+        <Link
+          href={`/profile/${profile.id}/follows?tab=followers`}
+          className="flex flex-col items-center gap-1 border-r border-border py-4 transition-colors hover:bg-surface-elevated/50"
+        >
           <span className="text-lg font-bold text-content">
             {followersCount ?? 0}
           </span>
           <span className="text-xs text-content-muted">フォロワー</span>
-        </div>
-        <div className="flex flex-col items-center gap-1 py-4">
+        </Link>
+        <Link
+          href={`/profile/${profile.id}/follows?tab=following`}
+          className="flex flex-col items-center gap-1 py-4 transition-colors hover:bg-surface-elevated/50"
+        >
           <span className="text-lg font-bold text-content">
             {followingCount ?? 0}
           </span>
           <span className="text-xs text-content-muted">フォロー</span>
-        </div>
+        </Link>
       </div>
     </section>
   );

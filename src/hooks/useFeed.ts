@@ -19,6 +19,9 @@ export function useFeed(
   const fetchReviews = useCallback(async () => {
     setLoading(true);
 
+    // フェイルセーフ: 5秒でローディングを強制解除
+    const timeout = setTimeout(() => setLoading(false), 5000);
+
     if (sortBy === "following" && userId) {
       const { data: followData } = await supabase
         .from("follows")
@@ -27,6 +30,7 @@ export function useFeed(
       const ids = (followData ?? []).map((f) => f.following_id as string);
       if (ids.length === 0) {
         setReviews([]);
+        clearTimeout(timeout);
         setLoading(false);
         return;
       }
@@ -45,6 +49,7 @@ export function useFeed(
           mapReviewRow(row as Record<string, unknown>),
         ),
       );
+      clearTimeout(timeout);
       setLoading(false);
       return;
     }
@@ -65,6 +70,7 @@ export function useFeed(
         mapReviewRow(row as Record<string, unknown>),
       ),
     );
+    clearTimeout(timeout);
     setLoading(false);
   }, [category, sortBy, userId]);
 

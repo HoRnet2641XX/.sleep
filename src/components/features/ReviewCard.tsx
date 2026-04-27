@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import type { ReviewWithUser } from "@/types";
 import { PERIOD_LABELS } from "@/types";
@@ -8,6 +9,8 @@ import { StarRating } from "@/components/ui/StarRating";
 import { CategoryBadge, EffectBadge } from "@/components/ui/Badge";
 import { AnimatedLikeButton } from "@/components/ui/AnimatedLikeButton";
 import { AnimatedBookmarkButton } from "@/components/ui/AnimatedBookmarkButton";
+import { AnimatedCommentButton } from "@/components/ui/AnimatedCommentButton";
+import { ReportDialog } from "@/components/features/ReportDialog";
 
 type ReviewCardProps = {
   review: ReviewWithUser;
@@ -28,6 +31,8 @@ export function ReviewCard({
 }: ReviewCardProps) {
   const validImages = review.imageUrls.filter((u) => u.trim());
   const comparisonCount = review.comparisonItems.length;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     if (!onClick) return;
@@ -46,7 +51,7 @@ export function ReviewCard({
       aria-label={onClick ? `${review.productName} のレビュー詳細を開く` : undefined}
       className="card-hover cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
-      {/* ヘッダー: ユーザー情報 + カテゴリ */}
+      {/* ヘッダー: ユーザー情報 + カテゴリ + メニュー */}
       <div className="mb-4 flex items-center gap-3">
         <Avatar name={review.user.nickname} imageUrl={review.user.avatarUrl} />
         <div className="min-w-0 flex-1">
@@ -56,7 +61,61 @@ export function ReviewCard({
           </p>
         </div>
         <CategoryBadge category={review.category} />
+
+        {/* オーバーフローメニュー */}
+        <div className="relative" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((o) => !o)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-content-muted transition-colors hover:bg-surface-elevated hover:text-content"
+            aria-label="その他のメニュー"
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="12" cy="5" r="1.5" />
+              <circle cx="12" cy="12" r="1.5" />
+              <circle cx="12" cy="19" r="1.5" />
+            </svg>
+          </button>
+          {menuOpen && (
+            <>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                className="fixed inset-0 z-30 cursor-default"
+                aria-label="メニューを閉じる"
+              />
+              <div
+                className="absolute right-0 top-full z-40 mt-1 w-40 overflow-hidden rounded-lg border border-border bg-surface-card shadow-xl"
+                role="menu"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setReportOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-content-secondary hover:bg-surface-elevated hover:text-error"
+                  role="menuitem"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  通報する
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
+
+      <ReportDialog
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="review"
+        targetId={review.id}
+      />
 
       {/* 製品名 */}
       <h3 className="mb-2 text-base font-bold leading-snug text-content">
@@ -132,17 +191,10 @@ export function ReviewCard({
           onToggle={onToggleLike}
         />
 
-        <button
-          type="button"
-          onClick={onClick}
-          className="flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-content-muted transition-colors duration-micro hover:bg-surface-elevated hover:text-content-secondary"
-          aria-label="コメントを見る"
-        >
-          <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          {review.commentsCount > 0 ? `${review.commentsCount}件` : "コメントする"}
-        </button>
+        <AnimatedCommentButton
+          count={review.commentsCount}
+          onClick={() => onClick?.()}
+        />
 
         <div className="flex-1" />
 

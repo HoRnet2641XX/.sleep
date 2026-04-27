@@ -3,14 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3300",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
-    "cap:build": "next build && npx cap sync",
-    "cap:ios": "next build && npx cap sync ios && npx cap open ios",
-    "cap:android": "next build && npx cap sync android && npx cap open android"
+    "cap:build": "CAPACITOR_BUILD=true next build && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 npx cap sync",
+    "cap:ios": "CAPACITOR_BUILD=true next build && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 npx cap sync ios && npx cap open ios",
+    "cap:ios:run": "CAPACITOR_BUILD=true next build && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 npx cap run ios",
+    "cap:android": "CAPACITOR_BUILD=true next build && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 npx cap sync android && npx cap open android",
+    "cap:android:run": "CAPACITOR_BUILD=true next build && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 npx cap run android"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.0",

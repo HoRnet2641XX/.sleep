@@ -9,9 +9,10 @@ type Props = {
   onClose: () => void;
   userId: string;
   onSignOut: () => void;
+  onOpenDashboard: () => void;
 };
 
-export function SlideMenu({ open, onClose, userId, onSignOut }: Props) {
+export function SlideMenu({ open, onClose, userId, onSignOut, onOpenDashboard }: Props) {
   const navRef = useRef<HTMLElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
@@ -130,9 +131,33 @@ export function SlideMenu({ open, onClose, userId, onSignOut }: Props) {
                     </Link>
                   </li>
                   <li>
-                    <Link href="/dashboard" onClick={onClose} className="flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content">
+                    <Link href="/bookmarks" onClick={onClose} className="flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content">
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      ブックマーク
+                    </Link>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={onOpenDashboard}
+                      className="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content"
+                    >
                       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M3 9h18M9 21V9" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       睡眠ダッシュボード
+                    </button>
+                  </li>
+                  <li>
+                    <Link href="/contact" onClick={onClose} className="flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content">
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                        <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      お問い合わせ
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/premium" onClick={onClose} className="flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm transition-colors hover:bg-surface-elevated">
+                      <svg className="h-5 w-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>
+                      <span className="bg-gradient-to-r from-primary to-accent bg-clip-text font-medium text-transparent">プレミアム</span>
                     </Link>
                   </li>
                 </ul>

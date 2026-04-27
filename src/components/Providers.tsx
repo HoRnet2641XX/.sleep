@@ -3,20 +3,35 @@
 import { useEffect } from "react";
 import { MotionConfig } from "framer-motion";
 import { AuthProvider } from "@/hooks/useAuth";
-import { Capacitor } from "@capacitor/core";
 
-/** Capacitor ネイティブ環境の初期化 */
+/** Capacitor ネイティブ環境の初期化 + 古いSWの掃除 */
 function useNativeSetup() {
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    // 既存ユーザーのブラウザに残ったSWを強制解除 (PWA機能は現状無効)
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => regs.forEach((r) => r.unregister()))
+        .catch(() => {});
+      if ("caches" in window) {
+        caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
+      }
+    }
 
     (async () => {
-      const { StatusBar, Style } = await import("@capacitor/status-bar");
-      const { SplashScreen } = await import("@capacitor/splash-screen");
+      try {
+        const { Capacitor } = await import("@capacitor/core");
+        if (!Capacitor.isNativePlatform()) return;
 
-      await StatusBar.setStyle({ style: Style.Dark });
-      await StatusBar.setBackgroundColor({ color: "#0B1120" });
-      await SplashScreen.hide();
+        const { StatusBar, Style } = await import("@capacitor/status-bar");
+        const { SplashScreen } = await import("@capacitor/splash-screen");
+
+        await StatusBar.setStyle({ style: Style.Dark });
+        await StatusBar.setBackgroundColor({ color: "#0B1120" });
+        await SplashScreen.hide();
+      } catch {
+        // Web環境ではCapacitorが利用不可 — 無視
+      }
     })();
   }, []);
 }

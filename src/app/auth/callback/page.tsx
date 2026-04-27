@@ -17,26 +17,25 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     (async () => {
-      // supabase-js が URL のトークン/コードを自動検出してセッションを確立
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+      // supabase-js は detectSessionInUrl により URL の ?code= / #access_token を
+      // 自動処理する。ここでは処理完了を待ってからセッションを読むだけにする。
+      // 明示的な exchangeCodeForSession を呼ぶと二重実行になり、
+      // 「PKCE code verifier not found」エラーを招くので呼ばない。
 
-      if (sessionError) {
-        setError(sessionError.message);
-        return;
+      // セッション確立を最大3秒まで待つ
+      let session = null;
+      for (let i = 0; i < 15; i++) {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          session = data.session;
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 200));
       }
 
       if (!session) {
-        // セッションが取得できない場合、少し待って再試行
-        // (リダイレクト直後はハッシュの処理に時間がかかることがある)
-        await new Promise((r) => setTimeout(r, 1000));
-        const { data: retry } = await supabase.auth.getSession();
-        if (!retry.session) {
-          setError("認証に失敗しました。もう一度お試しください。");
-          return;
-        }
+        setError("認証に失敗しました。もう一度お試しください。");
+        return;
       }
 
       const {

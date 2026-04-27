@@ -1,0 +1,27 @@
+{
+  "name": ".nemuri — 眠れない夜を、ひとりにしない",
+  "short_name": ".nemuri",
+  "description": "睡眠障害を抱える人同士が「自分に効いたもの」を共有し合うプラットフォーム。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080E1C",
+  "theme_color": "#080E1C",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "social"],
+  "lang": "ja",
+  "dir": "ltr"
+}

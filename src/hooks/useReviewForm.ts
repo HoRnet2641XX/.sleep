@@ -26,6 +26,7 @@ const INITIAL_FORM: ReviewFormData = {
   imageUrls: [],
   referenceUrl: "",
   comparisonItems: [],
+  isPrivate: false,
 };
 
 /** バリデーション */
@@ -120,6 +121,7 @@ export function useReviewForm() {
         image_urls: validImageUrls,
         reference_url: form.referenceUrl.trim() || null,
         comparison_items: validComparisons.length > 0 ? validComparisons : [],
+        is_private: form.isPrivate,
       });
 
       if (error) throw error;

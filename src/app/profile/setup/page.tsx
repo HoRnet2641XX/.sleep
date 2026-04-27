@@ -27,6 +27,7 @@ function SetupForm() {
           .upsert({
             id: user.id,
             nickname: data.nickname,
+            avatar_url: data.avatarUrl,
             height: data.height ? Number(data.height) : null,
             weight: data.weight ? Number(data.weight) : null,
             gender: data.gender,
@@ -71,11 +72,14 @@ function SetupForm() {
         )}
 
         {/* フォーム */}
-        <ProfileForm
-          onSubmit={handleSubmit}
-          submitLabel="はじめる"
-          submitting={submitting}
-        />
+        {user && (
+          <ProfileForm
+            userId={user.id}
+            onSubmit={handleSubmit}
+            submitLabel="はじめる"
+            submitting={submitting}
+          />
+        )}
 
         {/* スキップリンク */}
         <p className="mt-6 text-center">

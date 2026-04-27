@@ -272,7 +272,7 @@ export default function RankingPage() {
               <path d="M8 21h8M12 17v4M6 13l-1.12-7.03A1 1 0 015.87 5h12.26a1 1 0 01.99.97L18 13M6 13h12M6 13l-2 4h16l-2-4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <p className="mb-2 font-medium text-content">
-              まだラ��キン��データがありません
+              まだランキングデータがありません
             </p>
             <p className="text-sm text-content-secondary">
               レビューが集まるとランキングが表示されます

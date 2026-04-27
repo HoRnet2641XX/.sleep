@@ -8,11 +8,11 @@ const config: Config = {
       colors: {
         // ─── Primitive Colors ───
         navy: {
-          900: "#0B1120",
-          800: "#131D36",
-          700: "#1A2744",
-          600: "#243352",
-          500: "#2E4068",
+          900: "#080E1C",
+          800: "#10192E",
+          700: "#182240",
+          600: "#1E2D4D",
+          500: "#2A3D62",
         },
         lavender: {
           100: "#F0ECFA",
@@ -45,10 +45,10 @@ const config: Config = {
 
         // ─── Semantic Colors ───
         surface: {
-          DEFAULT: "#0B1120",
-          card: "#131D36",
-          elevated: "#1A2744",
-          input: "#0E1629",
+          DEFAULT: "#080E1C",
+          card: "#10192E",
+          elevated: "#182240",
+          input: "#0B1226",
         },
         primary: {
           DEFAULT: "#A98FD8",
@@ -60,13 +60,13 @@ const config: Config = {
           hover: "#FFD06A",
         },
         border: {
-          DEFAULT: "#243352",
-          light: "#2E4068",
+          DEFAULT: "#1E2D4D",
+          light: "#2A3D62",
         },
         content: {
           DEFAULT: "#F0ECFA",
-          secondary: "#9CA3B8",
-          muted: "#6B7280",
+          secondary: "#A0A8C0",
+          muted: "#5E6880",
         },
         success: { DEFAULT: "#4ADE80", dark: "#16A34A" },
         warning: { DEFAULT: "#FACC15", dark: "#CA8A04" },
@@ -74,10 +74,15 @@ const config: Config = {
         info: { DEFAULT: "#60A5FA", dark: "#2563EB" },
       },
       fontFamily: {
+        zen: [
+          "var(--font-zen)",
+          "Zen Kaku Gothic New",
+          "sans-serif",
+        ],
         sans: [
+          "var(--font-zen)",
+          "Zen Kaku Gothic New",
           "Hiragino Sans",
-          "Hiragino Kaku Gothic ProN",
-          "Noto Sans JP",
           "sans-serif",
         ],
         mono: ["JetBrains Mono", "Fira Code", "monospace"],

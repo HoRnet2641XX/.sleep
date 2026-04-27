@@ -3,9 +3,9 @@
 import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, useReducedMotion } from "framer-motion";
-import type { ReviewCategory } from "@/types";
-import { CATEGORY_LABELS } from "@/types";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import type { ReviewCategory, EffectLevel } from "@/types";
+import { CATEGORY_LABELS, EFFECT_LABELS } from "@/types";
 import { ReviewCard } from "@/components/features/ReviewCard";
 import { CategoryTabs } from "@/components/features/CategoryTabs";
 import { RecommendationCarousel } from "@/components/features/RecommendationCarousel";
@@ -14,6 +14,9 @@ import { CommunityPulse } from "@/components/features/CommunityPulse";
 import { SleepInsightCard } from "@/components/features/SleepInsightCard";
 import { JournalWidget } from "@/components/features/JournalWidget";
 import { SlideMenu } from "@/components/features/SlideMenu";
+import { SleepDashboardDrawer } from "@/components/features/SleepDashboardDrawer";
+import { NotificationsDrawer } from "@/components/features/NotificationsDrawer";
+import { useNotifications } from "@/hooks/useNotifications";
 import { MatchNotifications } from "@/components/features/MatchNotifications";
 import { useAuth } from "@/hooks/useAuth";
 import { useRecommendations } from "@/hooks/useRecommendations";
@@ -23,6 +26,7 @@ import { useFeed, type SortKey } from "@/hooks/useFeed";
 import { useInteractions } from "@/hooks/useInteractions";
 import { useHomeInsights } from "@/hooks/useHomeInsights";
 import { useMatchNotifications } from "@/hooks/useMatchNotifications";
+import { useSubscription } from "@/hooks/useSubscription";
 
 /* ─── トレンドアイコン（SVG） ─── */
 const TrendIcon = (
@@ -42,6 +46,16 @@ export function HomeFeed() {
   const [category, setCategory] = useState<ReviewCategory | "all">("all");
   const [sortBy, setSortBy] = useState<SortKey>("new");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [dashboardInitialRating, setDashboardInitialRating] = useState<number | null>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const { unreadCount: notifUnreadCount } = useNotifications(user?.id);
+
+  // プレミアム限定フィルター
+  const { isPremium } = useSubscription();
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [effectFilter, setEffectFilter] = useState<EffectLevel | null>(null);
+  const [minRating, setMinRating] = useState<number | null>(null);
 
   // 検索
   const search = useSearch();
@@ -54,11 +68,19 @@ export function HomeFeed() {
     search.isActive,
   );
 
-  // 表示対象のレビュー
-  const displayReviews = search.isActive ? search.results : reviews;
+  // 表示対象のレビュー + フィルター適用（全ユーザー利用可能）
+  const rawDisplayReviews = search.isActive ? search.results : reviews;
+  const displayReviews = useMemo(() => {
+    return rawDisplayReviews.filter((r) => {
+      if (effectFilter && r.effectLevel !== effectFilter) return false;
+      if (minRating !== null && r.rating < minRating) return false;
+      return true;
+    });
+  }, [rawDisplayReviews, effectFilter, minRating]);
+  const activeFilterCount = (effectFilter ? 1 : 0) + (minRating !== null ? 1 : 0);
 
   // いいね / ブックマーク
-  const { likedIds, savedIds, toggleLike, toggleBookmark } = useInteractions(
+  const { likedIds, savedIds, toggleLike, toggleBookmark, bookmarkLimitError } = useInteractions(
     user?.id,
     displayReviews,
     setReviews,
@@ -66,7 +88,7 @@ export function HomeFeed() {
   );
 
   // コミュニティデータ
-  const { nickname, activeUsers, insight } = useHomeInsights(user?.id);
+  const { nickname, avatarUrl, activeUsers, insight } = useHomeInsights(user?.id);
 
   // マッチング通知
   const { notifications: matchNotifications } = useMatchNotifications(user?.id);
@@ -79,8 +101,9 @@ export function HomeFeed() {
 
   const handleSignOut = useCallback(async () => {
     await signOut();
-    router.refresh();
-  }, [signOut, router]);
+    // フルリロードで確実にLPに戻す (router.refreshだとコンポーネントがアンマウントされない)
+    window.location.href = "/";
+  }, [signOut]);
 
   const isLoading = search.isActive ? search.searching : loading;
 
@@ -133,20 +156,39 @@ export function HomeFeed() {
               {authLoading ? (
                 <div className="h-8 w-16 animate-pulse rounded bg-surface-elevated" />
               ) : user ? (
-                <button
-                  type="button"
-                  onClick={() => setMenuOpen(true)}
-                  className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg p-2 text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content"
-                  aria-label="メニューを開く"
-                  aria-expanded={menuOpen}
-                  aria-haspopup="dialog"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                    <line x1="3" y1="6" x2="21" y2="6" strokeLinecap="round" />
-                    <line x1="3" y1="12" x2="21" y2="12" strokeLinecap="round" />
-                    <line x1="3" y1="18" x2="21" y2="18" strokeLinecap="round" />
-                  </svg>
-                </button>
+                <>
+                  {/* 通知ベル */}
+                  <button
+                    type="button"
+                    onClick={() => setNotifOpen(true)}
+                    className="relative flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg p-2 text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content"
+                    aria-label={notifUnreadCount > 0 ? `通知 ${notifUnreadCount}件` : "通知"}
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M13.73 21a2 2 0 01-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {notifUnreadCount > 0 && (
+                      <span className="absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white">
+                        {notifUnreadCount > 9 ? "9+" : notifUnreadCount}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen(true)}
+                    className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg p-2 text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content"
+                    aria-label="メニューを開く"
+                    aria-expanded={menuOpen}
+                    aria-haspopup="dialog"
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <line x1="3" y1="6" x2="21" y2="6" strokeLinecap="round" />
+                      <line x1="3" y1="12" x2="21" y2="12" strokeLinecap="round" />
+                      <line x1="3" y1="18" x2="21" y2="18" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </>
               ) : (
                 <Link
                   href="/login"
@@ -201,9 +243,21 @@ export function HomeFeed() {
         {/* ── ホーム上部ウィジェット群（検索中は非表示） ── */}
         {!search.isActive && user && (
           <>
-            <GreetingHeader nickname={nickname} hour={currentHour} />
+            <GreetingHeader
+              nickname={nickname}
+              hour={currentHour}
+              avatarUrl={avatarUrl}
+              isPremium={isPremium}
+              onAvatarClick={() => setMenuOpen(true)}
+            />
             <CommunityPulse count={activeUsers} />
-            <JournalWidget userId={user.id} />
+            <JournalWidget
+              userId={user.id}
+              onOpenDetail={(rating) => {
+                setDashboardInitialRating(rating ?? null);
+                setDashboardOpen(true);
+              }}
+            />
           </>
         )}
         {!search.isActive && insightWithIcon && (
@@ -254,26 +308,136 @@ export function HomeFeed() {
             </p>
           </div>
         ) : (
-          <div className="mb-4 flex gap-4 pl-1" role="tablist" aria-label="並び替え">
-            {sortTabs
-              .filter((s) => !s.authOnly || user)
-              .map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={sortBy === s.key}
-                  onClick={() => setSortBy(s.key)}
-                  className={`min-h-[32px] border-b-2 pb-1 text-sm transition-colors duration-micro ${
-                    sortBy === s.key
-                      ? "border-primary font-semibold text-content"
-                      : "border-transparent text-content-muted"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
+          <>
+          <div className="mb-4 flex items-center justify-between gap-4 pl-1">
+            <div className="flex gap-4" role="tablist" aria-label="並び替え">
+              {sortTabs
+                .filter((s) => !s.authOnly || user)
+                .map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={sortBy === s.key}
+                    onClick={() => setSortBy(s.key)}
+                    className={`min-h-[32px] border-b-2 pb-1 text-sm transition-colors duration-micro ${
+                      sortBy === s.key
+                        ? "border-primary font-semibold text-content"
+                        : "border-transparent text-content-muted"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+            </div>
+
+            {/* 絞り込みトグル */}
+            <button
+              type="button"
+              onClick={() => setFilterOpen((o) => !o)}
+              aria-expanded={filterOpen}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                activeFilterCount > 0
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border text-content-muted hover:border-border-light hover:text-content-secondary"
+              }`}
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              絞り込み
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold text-white">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
           </div>
+
+          {/* 絞り込みパネル: フローティング(position:absoluteで本文を押し下げない) */}
+          <div className="relative">
+            <AnimatePresence>
+              {filterOpen && (
+                <>
+                  {/* 背景クリックで閉じる */}
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen(false)}
+                    aria-label="絞り込みを閉じる"
+                    className="fixed inset-0 z-30 cursor-default"
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-0 z-40 w-[280px] rounded-xl border border-primary/20 bg-surface-card p-4 shadow-xl shadow-black/40"
+                    role="dialog"
+                    aria-label="絞り込み"
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-xs font-bold text-primary">絞り込み</p>
+                      {activeFilterCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEffectFilter(null);
+                            setMinRating(null);
+                          }}
+                          className="text-xs text-content-muted hover:text-content"
+                        >
+                          クリア
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="mb-4">
+                      <p className="mb-2 text-xs font-medium text-content-muted">効果の実感</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["none", "slight", "clear", "significant"] as EffectLevel[]).map((level) => (
+                          <button
+                            key={level}
+                            type="button"
+                            onClick={() =>
+                              setEffectFilter((prev) => (prev === level ? null : level))
+                            }
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                              effectFilter === level
+                                ? "border-primary bg-primary/15 text-primary"
+                                : "border-border text-content-secondary hover:border-border-light"
+                            }`}
+                          >
+                            {EFFECT_LABELS[level]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="mb-2 text-xs font-medium text-content-muted">最低評価</p>
+                      <div className="flex gap-1.5">
+                        {[5, 4, 3].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setMinRating((prev) => (prev === n ? null : n))}
+                            className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                              minRating === n
+                                ? "border-accent bg-accent/15 text-accent"
+                                : "border-border text-content-secondary hover:border-border-light"
+                            }`}
+                          >
+                            ★{n}以上
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+          </>
         )}
 
         {/* ── レビューフィード ── */}
@@ -351,13 +515,61 @@ export function HomeFeed() {
           onClose={() => setMenuOpen(false)}
           userId={user.id}
           onSignOut={handleSignOut}
+          onOpenDashboard={() => {
+            setMenuOpen(false);
+            setDashboardOpen(true);
+          }}
         />
       )}
+
+      {/* 通知ドロワー */}
+      <NotificationsDrawer
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        userId={user?.id ?? null}
+      />
+
+      {/* 睡眠ダッシュボード (ドロワー) */}
+      <SleepDashboardDrawer
+        open={dashboardOpen}
+        onClose={() => {
+          setDashboardOpen(false);
+          setDashboardInitialRating(null);
+        }}
+        userId={user?.id ?? null}
+        initialRating={dashboardInitialRating}
+      />
+
+      {/* ブックマーク上限トースト */}
+      <AnimatePresence>
+        {bookmarkLimitError && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-accent/40 bg-surface-card px-4 py-3 shadow-xl"
+            role="status"
+            aria-live="polite"
+          >
+            <svg className="h-5 w-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
+            <p className="text-sm text-content">{bookmarkLimitError}</p>
+            <Link
+              href="/premium"
+              className="ml-2 rounded-lg bg-accent/15 px-3 py-1 text-xs font-bold text-accent hover:bg-accent/25"
+            >
+              プレミアム
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-/* ──��� 空状態コンポーネント ─── */
+/* ─── 空状態コンポーネント ─── */
 function EmptyState({
   isSearching,
   sortBy,
@@ -401,7 +613,7 @@ function EmptyState({
             まだ誰もフォローしていません
           </p>
           <p className="mb-4 text-sm text-content-secondary">
-            気になる���ビュアーをフォローすると、ここに表示されます
+            気になるレビュアーをフォローすると、ここに表示されます
           </p>
           <button
             type="button"

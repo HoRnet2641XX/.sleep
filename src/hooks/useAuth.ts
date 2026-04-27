@@ -31,17 +31,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setState((prev) => ({ ...prev, user: session?.user ?? null, loading: false }));
-    });
+    let mounted = true;
+    const safeSetState = (updater: (prev: AuthState) => AuthState) => {
+      if (mounted) setState(updater);
+    };
+
+    // タイムアウト: 2秒以内にセッション取得できなければ未ログインとして扱う
+    const timeout = setTimeout(() => {
+      safeSetState((prev) => (prev.loading ? { ...prev, loading: false } : prev));
+    }, 2000);
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setState((prev) => ({ ...prev, user: session?.user ?? null, error: null }));
+      clearTimeout(timeout);
+      safeSetState((prev) => ({
+        ...prev,
+        user: session?.user ?? null,
+        loading: false,
+        error: null,
+      }));
     });
 
-    return () => subscription.unsubscribe();
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        clearTimeout(timeout);
+        safeSetState((prev) =>
+          prev.loading ? { ...prev, user: session?.user ?? null, loading: false } : prev,
+        );
+      })
+      .catch(() => {
+        clearTimeout(timeout);
+        safeSetState((prev) => (prev.loading ? { ...prev, loading: false } : prev));
+      });
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {

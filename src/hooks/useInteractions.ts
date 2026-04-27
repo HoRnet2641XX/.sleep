@@ -4,10 +4,13 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { ReviewWithUser } from "@/types";
+import { PLANS } from "@/types";
+import { useSubscription } from "@/hooks/useSubscription";
 
 /**
  * レビューリストに対する like / bookmark の状態管理。
  * 楽観的更新 + ロールバック付き。
+ * フリープランはブックマーク上限あり (PLANS.free.limits.bookmarks)。
  */
 export function useInteractions(
   userId: string | undefined,
@@ -16,8 +19,26 @@ export function useInteractions(
   setSearchResults: React.Dispatch<React.SetStateAction<ReviewWithUser[]>>,
 ) {
   const router = useRouter();
+  const { isPremium } = useSubscription();
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [totalBookmarks, setTotalBookmarks] = useState<number>(0);
+  const [bookmarkLimitError, setBookmarkLimitError] = useState<string | null>(null);
+
+  // 総ブックマーク数を取得（上限チェック用）
+  useEffect(() => {
+    if (!userId) {
+      setTotalBookmarks(0);
+      return;
+    }
+    (async () => {
+      const { count } = await supabase
+        .from("bookmarks")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+      setTotalBookmarks(count ?? 0);
+    })();
+  }, [userId]);
 
   // ID の join 文字列を安定キーにして無限ループを防ぐ
   const displayReviewIds = useMemo(
@@ -122,6 +143,19 @@ export function useInteractions(
         return;
       }
       const wasSaved = savedIds.has(reviewId);
+
+      // フリープランの上限チェック（新規追加のみ）
+      if (!wasSaved && !isPremium) {
+        const limit = PLANS.free.limits.bookmarks;
+        if (totalBookmarks >= limit) {
+          setBookmarkLimitError(
+            `ブックマークは${limit}件まで（プレミアムで無制限）`,
+          );
+          setTimeout(() => setBookmarkLimitError(null), 4000);
+          return;
+        }
+      }
+
       setSavedIds((prev) => {
         const next = new Set(prev);
         if (wasSaved) next.delete(reviewId);
@@ -135,10 +169,12 @@ export function useInteractions(
             .delete()
             .eq("review_id", reviewId)
             .eq("user_id", userId);
+          setTotalBookmarks((n) => Math.max(0, n - 1));
         } else {
           await supabase
             .from("bookmarks")
             .insert({ review_id: reviewId, user_id: userId });
+          setTotalBookmarks((n) => n + 1);
         }
       } catch {
         setSavedIds((prev) => {
@@ -149,8 +185,8 @@ export function useInteractions(
         });
       }
     },
-    [userId, savedIds, router],
+    [userId, savedIds, router, isPremium, totalBookmarks],
   );
 
-  return { likedIds, savedIds, toggleLike, toggleBookmark };
+  return { likedIds, savedIds, toggleLike, toggleBookmark, bookmarkLimitError, totalBookmarks };
 }

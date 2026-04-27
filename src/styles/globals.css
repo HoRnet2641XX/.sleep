@@ -5,38 +5,53 @@
 @layer base {
   :root {
     /* ─── Surface ─── */
-    --surface: #0b1120;
-    --surface-card: #131d36;
-    --surface-elevated: #1a2744;
-    --surface-input: #0e1629;
+    --surface: #080e1c;
+    --surface-card: #10192e;
+    --surface-elevated: #182240;
+    --surface-input: #0b1226;
 
-    /* ─── Content ─── */
-    --content: #f0ecfa;
-    --content-secondary: #9ca3b8;
-    --content-muted: #6b7280;
+    /* ─── Content (コントラスト強化版) ─── */
+    --content: #f5f2ff;            /* メインテキスト: ほぼ白 */
+    --content-secondary: #c4cad8;  /* 補助: 4.5:1 確保 */
+    --content-muted: #8891a8;      /* キャプション: 約3.5:1（lift up from #5e6880） */
 
     /* ─── Primary ─── */
-    --primary: #a98fd8;
-    --primary-hover: #c7b8e8;
+    --primary: #b8a0e3;            /* 少し明るく */
+    --primary-hover: #d3c4ed;
 
     /* ─── Accent ─── */
     --accent: #f5b83d;
 
     /* ─── Border ─── */
-    --border: #243352;
-    --border-light: #2e4068;
+    --border: #2d3e62;             /* 元 #1e2d4d より見える */
+    --border-light: #3f5176;
 
     /* ─── Semantic ─── */
     --success: #4ade80;
     --warning: #facc15;
     --error: #f87171;
     --info: #60a5fa;
+
+    /* ─── Shadows (上部光源を想定) ─── */
+    --shadow-card: 0 2px 8px rgba(0,0,0,0.35), 0 0 1px rgba(169,143,216,0.08);
+    --shadow-elevated: 0 8px 24px rgba(0,0,0,0.45), 0 0 1px rgba(169,143,216,0.1);
+    --shadow-glow: 0 0 20px rgba(169,143,216,0.06);
   }
 
   /* ─── Base Styles ─── */
   body {
     @apply bg-surface text-content antialiased;
     font-feature-settings: "palt";
+    /* 微細ノイズテクスチャ — べた塗り感を払拭 */
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(169,143,216,0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(245,184,61,0.02) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  /* ─── All text → Zen Kaku Gothic New ─── */
+  body, h1, h2, h3, h4 {
+    font-family: var(--font-zen), "Zen Kaku Gothic New", sans-serif;
   }
 
   /* ─── Focus Visible ─── */
@@ -79,15 +94,30 @@
   /* ─── カードの共通スタイル ─── */
   .card {
     @apply rounded-lg border border-border bg-surface-card p-5;
+    box-shadow: var(--shadow-card);
+    /* 上辺にかすかなハイライト — 光源感 */
+    border-top-color: rgba(169, 143, 216, 0.08);
   }
 
   .card-hover {
-    @apply card transition-all duration-micro;
+    @apply card transition-all duration-normal;
   }
 
   .card-hover:hover {
     @apply -translate-y-0.5;
-    border-color: rgba(169, 143, 216, 0.25);
+    border-color: rgba(169, 143, 216, 0.2);
+    box-shadow: var(--shadow-elevated), var(--shadow-glow);
+  }
+
+  /* ─── ガラスカード（ヘッダー・オーバーレイ用） ─── */
+  .glass {
+    @apply border border-border/40 backdrop-blur-xl;
+    background: linear-gradient(
+      135deg,
+      rgba(16, 25, 46, 0.85) 0%,
+      rgba(11, 17, 32, 0.92) 100%
+    );
+    box-shadow: var(--shadow-card), inset 0 1px 0 rgba(169, 143, 216, 0.06);
   }
 
   /* ─── ボタンバリアント ─── */
@@ -98,10 +128,12 @@
 
   .btn-primary {
     @apply btn bg-primary text-white;
+    box-shadow: 0 2px 8px rgba(169, 143, 216, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .btn-primary:hover {
     @apply bg-primary-hover;
+    box-shadow: 0 4px 16px rgba(169, 143, 216, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   .btn-secondary {
@@ -110,6 +142,7 @@
 
   .btn-secondary:hover {
     @apply border-border-light bg-surface-elevated;
+    box-shadow: var(--shadow-card);
   }
 
   .btn-ghost {
@@ -122,6 +155,7 @@
 
   .btn-destructive {
     @apply btn bg-error text-white;
+    box-shadow: 0 2px 8px rgba(248, 113, 113, 0.3);
   }
 
   /* ─── バッジ ─── */
@@ -131,9 +165,24 @@
 
   /* ─── 入力フィールド ─── */
   .input {
-    @apply w-full rounded-lg border border-border bg-surface-input px-4 py-3 text-base text-content outline-none transition-colors duration-micro;
+    @apply w-full rounded-lg border border-border bg-surface-input px-4 py-3 text-base text-content outline-none transition-all duration-micro;
     @apply placeholder:text-content-muted;
     @apply focus:border-primary;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .input:focus {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 0 3px rgba(169, 143, 216, 0.1);
+  }
+
+  /* ─── スティッキーヘッダー共通 ─── */
+  header[class*="sticky"] {
+    box-shadow: 0 1px 0 rgba(169, 143, 216, 0.04), 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /* ─── スティッキーボトムバー共通 ─── */
+  [class*="fixed"][class*="bottom-0"] {
+    box-shadow: 0 -1px 0 rgba(169, 143, 216, 0.04), 0 -4px 12px rgba(0, 0, 0, 0.3);
   }
 }
 

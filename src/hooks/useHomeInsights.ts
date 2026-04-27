@@ -14,20 +14,22 @@ import type { InsightData } from "@/components/features/SleepInsightCard";
  */
 export function useHomeInsights(userId: string | undefined) {
   const [nickname, setNickname] = useState<string | undefined>();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
   const [insight, setInsight] = useState<InsightData | null>(null);
 
   useEffect(() => {
     if (!userId) return;
 
-    // ニックネーム取得
+    // ニックネーム・アバター取得
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("nickname")
+        .select("nickname, avatar_url")
         .eq("id", userId)
         .maybeSingle();
       if (data?.nickname) setNickname(data.nickname as string);
+      if (data?.avatar_url !== undefined) setAvatarUrl((data?.avatar_url as string) ?? null);
     })();
 
     // 24h 以内のアクティブユーザー数
@@ -80,5 +82,5 @@ export function useHomeInsights(userId: string | undefined) {
     })();
   }, [userId]);
 
-  return { nickname, activeUsers, insight };
+  return { nickname, avatarUrl, activeUsers, insight };
 }

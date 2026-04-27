@@ -15,7 +15,7 @@ export function SleepInfoCard({ profile }: Props) {
 
   return (
     <section className="card" aria-label="睡眠について">
-      <h3 className="mb-4 text-sm font-semibold text-content-muted">睡眠につい���</h3>
+      <h3 className="mb-4 text-sm font-semibold text-content-muted">睡眠について</h3>
 
       {/* 睡眠障害タイプ */}
       {hasTypes && (

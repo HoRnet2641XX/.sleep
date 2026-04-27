@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthGuard } from "@/components/features/AuthGuard";
@@ -9,6 +10,7 @@ import { EffectSelector } from "@/components/features/EffectSelector";
 import { PeriodSelector } from "@/components/features/PeriodSelector";
 import { StarRating } from "@/components/ui/StarRating";
 import { useReviewForm, emptyComparisonItem } from "@/hooks/useReviewForm";
+import { useSubscription } from "@/hooks/useSubscription";
 import type { ReviewCategory, EffectLevel, UsagePeriod, ComparisonItem } from "@/types";
 
 const BODY_MAX_LENGTH = 2000;
@@ -114,6 +116,7 @@ function ComparisonRow({
 function PostForm() {
   const router = useRouter();
   const { form, errors, submitting, submitError, setField, validateAll, submit } = useReviewForm();
+  const { isPremium } = useSubscription();
   const [toast, setToast] = useState(false);
 
   const handleSubmit = useCallback(async () => {
@@ -339,6 +342,58 @@ function PostForm() {
             {form.comparisonItems.length === 0 && (
               <p className="text-xs text-content-muted">比較したい商品を追加すると、読者にとってより参考になります</p>
             )}
+          </motion.div>
+
+          {/* 非公開レビュー（プレミアム限定） */}
+          <motion.div custom={9} variants={sectionVariants} initial="hidden" animate="visible">
+            <div className={`rounded-xl border p-4 ${
+              isPremium ? "border-border/50 bg-surface-card" : "border-accent/20 bg-accent/5"
+            }`}>
+              <div className="flex items-start gap-3">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                  isPremium ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"
+                }`}>
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0110 0v4" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-content">自分用メモとして投稿</p>
+                    {!isPremium && (
+                      <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold text-accent">
+                        PREMIUM
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-content-muted">
+                    他のユーザーには公開されず、自分のプロフィールと検索からのみアクセスできます
+                  </p>
+                  {isPremium ? (
+                    <label className="mt-3 flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={form.isPrivate}
+                        onChange={(e) => setField("isPrivate", e.target.checked)}
+                        className="h-4 w-4 rounded border-border accent-primary"
+                      />
+                      <span className="text-sm text-content">非公開で投稿する</span>
+                    </label>
+                  ) : (
+                    <Link
+                      href="/premium"
+                      className="mt-3 inline-flex items-center gap-1 rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-bold text-accent transition-colors hover:bg-accent/25"
+                    >
+                      プレミアムについて
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
           </motion.div>
 
           {/* 送信エラー（フォーム下部） */}

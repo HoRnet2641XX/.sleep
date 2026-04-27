@@ -16,6 +16,7 @@ import { CommentInput } from "@/components/features/CommentInput";
 import { AnimatedLikeButton } from "@/components/ui/AnimatedLikeButton";
 import { AnimatedBookmarkButton } from "@/components/ui/AnimatedBookmarkButton";
 import { ShareButtons } from "@/components/ui/ShareButtons";
+import { AffiliateLinks } from "@/components/ui/AffiliateLinks";
 import { PERIOD_LABELS, SLEEP_DISORDER_LABELS } from "@/types";
 import type { SleepDisorderType } from "@/types";
 
@@ -396,6 +397,20 @@ export default function ReviewDetailClient({ reviewId }: { reviewId: string }) {
 
             {/* 8. 医薬品の免責表示 */}
             {review.category === "medicine" && <MedicalDisclaimer />}
+
+            {/* 8.5. アフィリエイトリンク */}
+            <motion.section
+              custom={6.5}
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              aria-label="商品リンク"
+            >
+              <AffiliateLinks
+                productName={review.productName}
+                category={review.category}
+              />
+            </motion.section>
 
             {/* 9. アクションバー */}
             <motion.section

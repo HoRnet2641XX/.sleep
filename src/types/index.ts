@@ -105,6 +105,59 @@ export type Follow = {
   createdAt: string;
 };
 
+// ─── サブスクリプション ───
+export type PlanType = "free" | "premium";
+export type SubscriptionStatus = "active" | "canceled" | "expired" | "past_due";
+
+export type Subscription = {
+  id: string;
+  userId: string;
+  plan: PlanType;
+  status: SubscriptionStatus;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+};
+
+/** プラン定義 */
+export const PLANS = {
+  free: {
+    name: "フリー",
+    price: 0,
+    features: [
+      "レビューの閲覧・投稿",
+      "いいね・コメント",
+      "基本的な検索",
+      "ブックマーク 20件まで",
+    ],
+    limits: {
+      bookmarks: 20,
+      dashboardDays: 7,
+      advancedFilter: false,
+      privateReview: false,
+      adFree: false,
+    },
+  },
+  premium: {
+    name: "プレミアム",
+    price: 580,
+    features: [
+      "すべてのフリー機能",
+      "症状・体型・年齢でのフィルター",
+      "ダッシュボード長期トレンド（90日）",
+      "ブックマーク無制限",
+      "非公開レビュー（自分用メモ）",
+      "広告非表示",
+    ],
+    limits: {
+      bookmarks: Infinity,
+      dashboardDays: 90,
+      advancedFilter: true,
+      privateReview: true,
+      adFree: true,
+    },
+  },
+} as const;
+
 // ─── フォーム用 ───
 export type ReviewFormData = {
   category: ReviewCategory | "";
@@ -117,6 +170,7 @@ export type ReviewFormData = {
   imageUrls: string[];
   referenceUrl: string;
   comparisonItems: ComparisonItem[];
+  isPrivate: boolean;
 };
 
 // ─── ラベルマッピング ───
