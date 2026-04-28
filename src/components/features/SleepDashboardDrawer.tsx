@@ -631,7 +631,7 @@ export function SleepDashboardDrawer({ open, onClose, userId, initialRating }: P
                         onClick={onClose}
                         className="flex items-center justify-between border-t border-accent/10 px-4 py-3 text-xs font-bold text-accent transition-colors hover:bg-accent/5"
                       >
-                        プレミアムにアップグレード (¥300/月)
+                        プレミアムにする (¥300 買い切り)
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                           <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>

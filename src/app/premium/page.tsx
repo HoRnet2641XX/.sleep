@@ -31,7 +31,7 @@ export default function PremiumPage() {
   const router = useRouter();
   const reduced = useReducedMotion();
   const { user } = useAuth();
-  const { plan: currentPlan, isPremium, periodEnd, cancelAtPeriodEnd } = useSubscription();
+  const { plan: currentPlan, isPremium } = useSubscription();
   const [processing, setProcessing] = useState(false);
 
   const handleSubscribe = async () => {
@@ -200,7 +200,7 @@ export default function PremiumPage() {
                       <span className="text-3xl font-bold text-content">
                         ¥{plan.price.toLocaleString()}
                       </span>
-                      <span className="text-sm text-content-muted">/月</span>
+                      <span className="text-sm text-content-muted">買い切り</span>
                     </>
                   )}
                 </div>
@@ -222,15 +222,7 @@ export default function PremiumPage() {
                 {/* アクションボタン */}
                 {isCurrent ? (
                   <div className="flex items-center justify-center rounded-xl bg-surface-elevated px-4 py-3 text-sm font-medium text-content-muted">
-                    {isPremium && cancelAtPeriodEnd ? (
-                      <span>
-                        {periodEnd
-                          ? `${new Date(periodEnd).toLocaleDateString("ja-JP")} まで有効`
-                          : "キャンセル済み"}
-                      </span>
-                    ) : (
-                      "現在のプラン"
-                    )}
+                    現在のプラン
                   </div>
                 ) : isRecommended ? (
                   <button
@@ -269,12 +261,16 @@ export default function PremiumPage() {
           <div className="space-y-4">
             {[
               {
-                q: "いつでもキャンセルできますか？",
-                a: "はい。いつでもキャンセル可能で、現在の請求期間の終了までプレミアム機能を使い続けられます。",
+                q: "買い切りですか？継続課金ですか？",
+                a: "買い切りです。一度ご購入いただくと、それ以降ずっとプレミアム機能をお使いいただけます。月額・年額の継続課金は発生しません。",
               },
               {
                 q: "支払い方法は？",
-                a: "クレジットカード（Stripe）に対応しています。iOSアプリではApple In-App Purchase、AndroidではGoogle Play決済も利用できます。",
+                a: "クレジットカード（Stripe決済）に対応しています。VISA / MasterCard / JCB / AMEX / Diners が利用可能です。",
+              },
+              {
+                q: "返金はできますか？",
+                a: "原則として、決済完了後の返金は承っておりません。事前にフリープランで操作感を確認のうえご購入ください。サービス側の重大な不具合があった場合はお問い合わせください。",
               },
               {
                 q: "フリープランでも十分使えますか？",

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Stripe Webhook 受信エンドポイント。
+ * Stripe Webhook 受信エンドポイント（買い切り型）。
  *
  * 必要な環境変数:
  *   STRIPE_SECRET_KEY                - Stripe シークレット
@@ -11,9 +11,7 @@ import { createClient } from "@supabase/supabase-js";
  *   NEXT_PUBLIC_SUPABASE_URL         - Supabase URL
  *
  * Stripe ダッシュボードで Webhook を以下のイベントで設定:
- *   - checkout.session.completed
- *   - customer.subscription.updated
- *   - customer.subscription.deleted
+ *   - checkout.session.completed   ← 買い切りでは これだけで OK
  */
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_SECRET_KEY;
@@ -74,50 +72,27 @@ export async function POST(req: NextRequest) {
       const userId =
         (obj.client_reference_id as string | null) ??
         ((obj.metadata as Record<string, string> | null)?.user_id ?? null);
-      const subId = obj.subscription as string | null;
-      if (userId) {
+      const paymentStatus = obj.payment_status as string | undefined;
+      /* 支払い完了済みのセッションのみプレミアム化（"paid" または未指定 = 即時決済） */
+      if (userId && (!paymentStatus || paymentStatus === "paid")) {
         await supabase
           .from("profiles")
           .update({ is_premium: true, updated_at: new Date().toISOString() })
           .eq("id", userId);
-        if (subId) {
-          await supabase.from("subscriptions").upsert(
-            {
-              user_id: userId,
-              plan: "premium",
-              status: "active",
-              current_period_start: new Date().toISOString(),
-              current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              cancel_at_period_end: false,
-              payment_provider: "stripe",
-              provider_subscription_id: subId,
-            },
-            { onConflict: "user_id" },
-          );
-        }
-      }
-      break;
-    }
-    case "customer.subscription.updated":
-    case "customer.subscription.deleted": {
-      const userId = (obj.metadata as Record<string, string> | null)?.user_id ?? null;
-      if (userId) {
-        const status = obj.status as string;
-        const isActive = status === "active" || status === "trialing";
-        await supabase
-          .from("profiles")
-          .update({ is_premium: isActive, updated_at: new Date().toISOString() })
-          .eq("id", userId);
-        await supabase
-          .from("subscriptions")
-          .update({
-            status: isActive ? "active" : "canceled",
-            cancel_at_period_end: !!obj.cancel_at_period_end,
-            current_period_end: obj.current_period_end
-              ? new Date((obj.current_period_end as number) * 1000).toISOString()
-              : undefined,
-          })
-          .eq("user_id", userId);
+        /* 買い切りなので current_period_end は遠い未来 (実質永久) */
+        await supabase.from("subscriptions").upsert(
+          {
+            user_id: userId,
+            plan: "premium",
+            status: "active",
+            current_period_start: new Date().toISOString(),
+            current_period_end: new Date("9999-12-31T00:00:00Z").toISOString(),
+            cancel_at_period_end: false,
+            payment_provider: "stripe",
+            provider_subscription_id: (obj.id as string) ?? null,
+          },
+          { onConflict: "user_id" },
+        );
       }
       break;
     }

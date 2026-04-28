@@ -51,7 +51,7 @@ export function PremiumGate({
             {feature}はプレミアム限定
           </p>
           <p className="text-xs text-content-muted">
-            月額300円ですべての機能が使えます
+            300円の買い切りですべての機能が使えます
           </p>
 
           <Link

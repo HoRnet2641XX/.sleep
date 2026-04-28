@@ -1,29 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Stripe Checkout セッション作成エンドポイント。
+ * Stripe Checkout セッション作成エンドポイント（買い切り型）。
  *
  * 必要な環境変数:
- *   STRIPE_SECRET_KEY              - Stripe シークレット (sk_...)
- *   STRIPE_PRICE_ID_PREMIUM_MONTHLY - 月額プランの Price ID (price_...)
- *   NEXT_PUBLIC_SITE_URL           - 本サイトのオリジン (https://...)
+ *   STRIPE_SECRET_KEY            - Stripe シークレット (sk_...)
+ *   STRIPE_PRICE_ID_PREMIUM      - 買い切り Price ID (price_...)
+ *   NEXT_PUBLIC_SITE_URL         - 本サイトのオリジン (https://...)
  *
  * セットアップ手順:
- *   1. https://dashboard.stripe.com で「商品」を作成し月額¥300の Price を作る
- *   2. Webhook で checkout.session.completed と customer.subscription.* を受け、
- *      app/api/stripe/webhook/route.ts (要追加) で profiles.is_premium を更新
+ *   1. https://dashboard.stripe.com で「商品」を作成し、買い切り ¥300 の Price を作る
+ *      （定期支払いではなく「1回限りの料金」を選択）
+ *   2. Webhook で checkout.session.completed を受けて profiles.is_premium を更新
  *   3. `npm i stripe` でSDKを追加
  */
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_SECRET_KEY;
-  const priceId = process.env.STRIPE_PRICE_ID_PREMIUM_MONTHLY;
+  const priceId =
+    process.env.STRIPE_PRICE_ID_PREMIUM ??
+    process.env.STRIPE_PRICE_ID_PREMIUM_MONTHLY; // 後方互換
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin;
 
   if (!secret || !priceId) {
     return NextResponse.json(
       {
-        error: "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_PREMIUM_MONTHLY.",
+        error: "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_PREMIUM.",
       },
       { status: 503 },
     );
@@ -66,13 +68,12 @@ export async function POST(req: NextRequest) {
   };
 
   const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
+    mode: "payment", // 買い切り
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],
     customer_email: email,
     client_reference_id: userId,
     metadata: { user_id: userId },
-    subscription_data: { metadata: { user_id: userId } },
     success_url: `${siteUrl}/premium?status=success`,
     cancel_url: `${siteUrl}/premium?status=canceled`,
     locale: "ja",
