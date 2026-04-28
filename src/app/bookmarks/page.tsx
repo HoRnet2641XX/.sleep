@@ -31,7 +31,7 @@ function BookmarksContent() {
         .limit(100);
       if (cancelled) return;
       const rows = (data ?? [])
-        .map((b) => b.reviews as Record<string, unknown> | null)
+        .map((b) => b.reviews as unknown as Record<string, unknown> | null)
         .filter(Boolean) as Record<string, unknown>[];
       setReviews(rows.map((r) => mapReviewRow(r)));
       setLoading(false);

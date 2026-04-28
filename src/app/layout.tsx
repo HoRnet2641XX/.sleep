@@ -13,6 +13,9 @@ const zenKaku = Zen_Kaku_Gothic_New({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://nemuri.app",
+  ),
   title: ".nemuri — 眠れない夜を、ひとりにしない",
   description:
     "睡眠障害を抱える人同士が「自分に効いたもの」を共有し合うプラットフォーム。薬・寝具・生活習慣のリアルなレビューが集まる場所。",

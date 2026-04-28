@@ -9,8 +9,7 @@ import { supabase } from "@/lib/supabase";
 import type { Gender, SleepDisorderType } from "@/types";
 
 /** アカウント削除ゾーン */
-function DangerZone({ userId }: { userId: string }) {
-  const router = useRouter();
+function DangerZone() {
   const [confirming, setConfirming] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -229,7 +228,7 @@ function EditForm() {
         )}
 
         {/* 危険な操作: アカウント削除 */}
-        {user && <DangerZone userId={user.id} />}
+        {user && <DangerZone />}
       </div>
     </main>
   );
