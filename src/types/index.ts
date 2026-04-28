@@ -139,7 +139,7 @@ export const PLANS = {
   },
   premium: {
     name: "プレミアム",
-    price: 580,
+    price: 300,
     features: [
       "すべてのフリー機能",
       "症状・体型・年齢でのフィルター",

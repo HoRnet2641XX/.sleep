@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
  *   NEXT_PUBLIC_SITE_URL           - 本サイトのオリジン (https://...)
  *
  * セットアップ手順:
- *   1. https://dashboard.stripe.com で「商品」を作成し月額¥580の Price を作る
+ *   1. https://dashboard.stripe.com で「商品」を作成し月額¥300の Price を作る
  *   2. Webhook で checkout.session.completed と customer.subscription.* を受け、
  *      app/api/stripe/webhook/route.ts (要追加) で profiles.is_premium を更新
  *   3. `npm i stripe` でSDKを追加
