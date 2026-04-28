@@ -1,7 +1,16 @@
 -- avatars バケット: プロフィールアイコン保存用
-insert into storage.buckets (id, name, public)
-  values ('avatars', 'avatars', true)
-  on conflict (id) do nothing;
+-- file_size_limit と allowed_mime_types で DB 側でも検証
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values (
+    'avatars',
+    'avatars',
+    true,
+    2097152, -- 2MB
+    array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  )
+  on conflict (id) do update set
+    file_size_limit = 2097152,
+    allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 -- 既存ポリシーを削除して再作成（冪等）
 drop policy if exists "avatar_public_read" on storage.objects;

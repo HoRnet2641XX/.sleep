@@ -6,6 +6,7 @@ import { AuthGuard } from "@/components/features/AuthGuard";
 import { ProfileForm, type ProfileFormData, EMPTY_FORM } from "@/components/features/ProfileForm";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
+import { sanitizeError } from "@/lib/sanitizeError";
 import type { Gender, SleepDisorderType } from "@/types";
 
 /** アカウント削除ゾーン */
@@ -21,7 +22,7 @@ function DangerZone() {
     /* RPC経由で auth.users を削除 (cascade で profiles 等も連動) */
     const { error: rpcError } = await supabase.rpc("delete_my_account");
     if (rpcError) {
-      setError(`削除に失敗しました: ${rpcError.message}`);
+      setError(sanitizeError(rpcError).message);
       setDeleting(false);
       return;
     }

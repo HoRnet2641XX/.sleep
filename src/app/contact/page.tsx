@@ -4,6 +4,7 @@ import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { sanitizeError } from "@/lib/sanitizeError";
 
 type Category = "general" | "bug" | "report" | "deletion" | "other";
 
@@ -46,7 +47,7 @@ export default function ContactPage() {
       });
 
     if (insertError) {
-      setError(`送信に失敗しました: ${insertError.message}`);
+      setError(sanitizeError(insertError).message);
       setSending(false);
       return;
     }

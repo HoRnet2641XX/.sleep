@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { sanitizeError } from "@/lib/sanitizeError";
 
 type Props = {
   open: boolean;
@@ -46,7 +47,7 @@ export function ReportDialog({ open, onClose, targetType, targetId }: Props) {
       reason: text,
     });
     if (err) {
-      setError(err.message);
+      setError(sanitizeError(err).message);
       setSubmitting(false);
       return;
     }

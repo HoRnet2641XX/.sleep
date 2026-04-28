@@ -11,6 +11,40 @@ type Props = {
 };
 
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+/** マジックバイトで実ファイル形式を検証（拡張子だけでは詐称可能なため） */
+async function isValidImage(file: File): Promise<boolean> {
+  const buf = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  // JPEG: FF D8 FF
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return true;
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buf[0] === 0x89 &&
+    buf[1] === 0x50 &&
+    buf[2] === 0x4e &&
+    buf[3] === 0x47
+  ) return true;
+  // GIF: 47 49 46 38
+  if (
+    buf[0] === 0x47 &&
+    buf[1] === 0x49 &&
+    buf[2] === 0x46 &&
+    buf[3] === 0x38
+  ) return true;
+  // WebP: 52 49 46 46 ?? ?? ?? ?? 57 45 42 50
+  if (
+    buf[0] === 0x52 &&
+    buf[1] === 0x49 &&
+    buf[2] === 0x46 &&
+    buf[3] === 0x46 &&
+    buf[8] === 0x57 &&
+    buf[9] === 0x45 &&
+    buf[10] === 0x42 &&
+    buf[11] === 0x50
+  ) return true;
+  return false;
+}
 
 export function AvatarUpload({ userId, currentUrl, nickname, onChange }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -21,12 +55,17 @@ export function AvatarUpload({ userId, currentUrl, nickname, onChange }: Props) 
     async (file: File) => {
       setError(null);
 
-      if (!file.type.startsWith("image/")) {
-        setError("画像ファイルを選んでください");
+      if (!ALLOWED_MIME.includes(file.type)) {
+        setError("JPEG / PNG / WebP / GIF の画像のみアップロード可能です");
         return;
       }
       if (file.size > MAX_SIZE) {
         setError("ファイルサイズは2MB以下にしてください");
+        return;
+      }
+      const valid = await isValidImage(file);
+      if (!valid) {
+        setError("画像ファイルとして認識できませんでした");
         return;
       }
 
