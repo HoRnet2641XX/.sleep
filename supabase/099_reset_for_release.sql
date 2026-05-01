@@ -40,10 +40,14 @@ truncate table public.profiles restart identity cascade;
 -- 全ユーザーを削除（profiles と再びリンクするものは既にCASCADEで消えている）
 delete from auth.users;
 
--- avatars バケット内のファイル本体を削除（バケット定義は残す）
-delete from storage.objects where bucket_id = 'avatars';
-
 commit;
+
+-- ⚠️ avatars バケット内のファイルは Supabase の保護機能 (storage.protect_delete)
+-- により直接 SQL では削除できません。Dashboard から手動削除してください:
+--   1. Supabase Dashboard → Storage → avatars バケット
+--   2. 全ファイルを選択 → 右クリック → Delete
+-- もしくは Supabase CLI:
+--   supabase storage rm -r ss:///avatars --experimental
 
 -- 確認用: 全テーブルが空になっているか
 select 'auth.users' as tbl, count(*) from auth.users
@@ -58,5 +62,4 @@ union all select 'subscriptions', count(*) from public.subscriptions
 union all select 'notifications', count(*) from public.notifications
 union all select 'reports', count(*) from public.reports
 union all select 'blocks', count(*) from public.blocks
-union all select 'contact_messages', count(*) from public.contact_messages
-union all select 'storage.objects (avatars)', count(*) from storage.objects where bucket_id = 'avatars';
+union all select 'contact_messages', count(*) from public.contact_messages;
