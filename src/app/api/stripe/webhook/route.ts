@@ -73,20 +73,23 @@ export async function POST(req: NextRequest) {
           .from("profiles")
           .update({ is_premium: true, updated_at: new Date().toISOString() })
           .eq("id", userId);
-        /* 買い切りなので current_period_end は遠い未来 (実質永久) */
-        await supabase.from("subscriptions").upsert(
-          {
-            user_id: userId,
-            plan: "premium",
-            status: "active",
-            current_period_start: new Date().toISOString(),
-            current_period_end: new Date("9999-12-31T00:00:00Z").toISOString(),
-            cancel_at_period_end: false,
-            payment_provider: "stripe",
-            provider_subscription_id: (obj.id as string) ?? null,
-          },
-          { onConflict: "user_id" },
-        );
+        /* 既存 active を canceled にしてから新規 active を1行追加
+           (partial unique index 対策で upsert を使わない) */
+        await supabase
+          .from("subscriptions")
+          .update({ status: "canceled" })
+          .eq("user_id", userId)
+          .in("status", ["active", "past_due"]);
+        await supabase.from("subscriptions").insert({
+          user_id: userId,
+          plan: "premium",
+          status: "active",
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date("9999-12-31T00:00:00Z").toISOString(),
+          cancel_at_period_end: false,
+          payment_provider: "stripe",
+          provider_subscription_id: (obj.id as string) ?? null,
+        });
       }
       break;
     }

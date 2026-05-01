@@ -9,6 +9,10 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/lib/supabase";
 import { PLANS } from "@/types";
 import type { PlanType } from "@/types";
+import {
+  PaymentStatusModal,
+  type PaymentStatus,
+} from "@/components/features/PaymentStatusModal";
 
 const PLAN_KEYS: PlanType[] = ["free", "premium"];
 
@@ -42,46 +46,86 @@ function PremiumContent() {
   const { user } = useAuth();
   const { plan: currentPlan, isPremium } = useSubscription();
   const [processing, setProcessing] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   /* Stripe Checkout から戻ってきた時の自動検証（Webhook フォールバック） */
   useEffect(() => {
     if (!user) return;
     const status = searchParams?.get("status");
     if (status !== "success") return;
-    if (isPremium) return; // 既にプレミアムなら何もしない
+    /* このフラグで多重起動を防ぐ */
+    let cancelled = false;
 
-    setVerifying(true);
-    setVerifyMessage("お支払いを確認しています...");
+    (async () => {
+      setPaymentStatus("verifying");
 
-    fetch("/api/stripe/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id }),
-    })
-      .then((r) => r.json())
-      .then((data: { verified?: boolean }) => {
-        if (data.verified) {
-          setVerifyMessage("プレミアムへのアップグレードが完了しました！");
-          /* useSubscription を最新化するためにリロード */
-          setTimeout(() => window.location.replace("/premium"), 1500);
-        } else {
-          setVerifyMessage(
-            "決済の確認に時間がかかっています。数分後にこのページを再読み込みしてください。",
+      try {
+        const res = await fetch("/api/stripe/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.id }),
+        });
+        const data = (await res.json()) as {
+          verified?: boolean;
+          reason?: string;
+          details?: string;
+        };
+        if (cancelled) return;
+
+        if (!data.verified) {
+          setPaymentError(
+            data.reason === "no_paid_session"
+              ? "決済が確認できませんでした。決済が完了している場合は数分後に再度お試しください。"
+              : data.details ?? "決済の確認に失敗しました。",
           );
-          setVerifying(false);
+          setPaymentStatus("error");
+          return;
         }
-      })
-      .catch(() => {
-        setVerifyMessage(
-          "確認に失敗しました。問題が続く場合はお問い合わせください。",
+
+        /* DB に反映されたか確認するまでポーリング */
+        for (let i = 0; i < 10; i++) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("is_premium")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (cancelled) return;
+          if (profile?.is_premium) {
+            setPaymentStatus("success");
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 600));
+        }
+        setPaymentError(
+          "プレミアム化の反映に時間がかかっています。再読み込みすると反映される場合があります。",
         );
-        setVerifying(false);
-      });
-    /* user は遅延ロードなので user.id だけ依存 */
+        setPaymentStatus("error");
+      } catch (e) {
+        if (cancelled) return;
+        setPaymentError(
+          e instanceof Error ? e.message : "通信エラーが発生しました",
+        );
+        setPaymentStatus("error");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, searchParams?.get("status"), isPremium]);
+  }, [user?.id, searchParams?.get("status")]);
+
+  /* 成功モーダルを閉じたら状態を最新化 */
+  const handleCloseStatusModal = () => {
+    if (paymentStatus === "success") {
+      /* URLからクエリを除去しつつフルリロードで useSubscription を最新化 */
+      window.location.replace("/premium");
+      return;
+    }
+    setPaymentStatus(null);
+    setPaymentError(null);
+  };
 
   const handleSubscribe = async () => {
     if (!user) {
@@ -193,15 +237,12 @@ function PremiumContent() {
           </div>
         )}
 
-        {/* 決済戻り時の検証ステータス */}
-        {verifyMessage && (
-          <div className="mx-auto mb-6 max-w-md rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-center">
-            {verifying && (
-              <div className="mx-auto mb-2 h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            )}
-            <p className="text-sm text-primary">{verifyMessage}</p>
-          </div>
-        )}
+        {/* 決済モーダル: verifying / success / error */}
+        <PaymentStatusModal
+          status={paymentStatus}
+          errorMessage={paymentError}
+          onClose={handleCloseStatusModal}
+        />
 
         {/* ヒーロー */}
         <motion.div
