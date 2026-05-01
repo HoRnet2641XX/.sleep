@@ -47,10 +47,21 @@ export default function PremiumPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user.id, email: user.email ?? "" }),
       });
-      const data = (await res.json()) as { url?: string; error?: string };
+      const data = (await res.json()) as {
+        url?: string;
+        error?: string;
+        missing?: string[];
+      };
       if (!res.ok || !data.url) {
         if (res.status === 503) {
-          alert("決済機能は現在準備中です。近日公開予定！");
+          /* 開発時のみ詳細を表示 */
+          if (process.env.NODE_ENV !== "production" && data.missing) {
+            alert(
+              `決済機能の設定が不完全です。\n未設定: ${data.missing.join(", ")}\n\nVercelの環境変数を設定してください。`,
+            );
+          } else {
+            alert("決済機能は現在準備中です。近日公開予定！");
+          }
         } else {
           alert(`決済の開始に失敗しました: ${data.error ?? "不明なエラー"}`);
         }

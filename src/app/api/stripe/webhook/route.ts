@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import Stripe from "stripe";
 
 /**
  * Stripe Webhook 受信エンドポイント（買い切り型）。
@@ -9,9 +10,6 @@ import { createClient } from "@supabase/supabase-js";
  *   STRIPE_WEBHOOK_SECRET            - Webhook 署名シークレット (whsec_...)
  *   SUPABASE_SERVICE_ROLE_KEY        - サーバー側 Supabase クライアント用
  *   NEXT_PUBLIC_SUPABASE_URL         - Supabase URL
- *
- * Stripe ダッシュボードで Webhook を以下のイベントで設定:
- *   - checkout.session.completed   ← 買い切りでは これだけで OK
  */
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_SECRET_KEY;
@@ -19,53 +17,49 @@ export async function POST(req: NextRequest) {
   const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supaServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!secret || !whSecret || !supaUrl || !supaServiceKey) {
-    return NextResponse.json({ error: "not configured" }, { status: 503 });
+  const missing: string[] = [];
+  if (!secret) missing.push("STRIPE_SECRET_KEY");
+  if (!whSecret) missing.push("STRIPE_WEBHOOK_SECRET");
+  if (!supaUrl) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!supaServiceKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (missing.length > 0) {
+    return NextResponse.json(
+      { error: `not configured. Missing: ${missing.join(", ")}` },
+      { status: 503 },
+    );
   }
 
-  let StripeMod: { default: new (key: string) => unknown } | null = null;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const dyn = new Function("m", "return import(m)") as (
-      m: string,
-    ) => Promise<{ default: new (key: string) => unknown }>;
-    StripeMod = await dyn("stripe");
-  } catch {
-    return NextResponse.json({ error: "stripe SDK not installed" }, { status: 503 });
-  }
-  if (!StripeMod) {
-    return NextResponse.json({ error: "stripe SDK load failed" }, { status: 503 });
-  }
-  const Stripe = StripeMod.default;
-  const stripe = new Stripe(secret) as {
-    webhooks: {
-      constructEvent: (
-        payload: string,
-        sig: string,
-        secret: string,
-      ) => { type: string; data: { object: Record<string, unknown> } };
-    };
-  };
+  const stripe = new Stripe(secret as string, {
+    apiVersion: "2026-04-22.dahlia",
+  });
 
   const sig = req.headers.get("stripe-signature");
-  if (!sig) return NextResponse.json({ error: "missing signature" }, { status: 400 });
+  if (!sig)
+    return NextResponse.json(
+      { error: "missing signature" },
+      { status: 400 },
+    );
 
   const payload = await req.text();
-  let event;
+  let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(payload, sig, whSecret);
+    event = stripe.webhooks.constructEvent(payload, sig, whSecret as string);
   } catch (e) {
     return NextResponse.json(
-      { error: `signature verification failed: ${e instanceof Error ? e.message : "unknown"}` },
+      {
+        error: `signature verification failed: ${
+          e instanceof Error ? e.message : "unknown"
+        }`,
+      },
       { status: 400 },
     );
   }
 
-  const supabase = createClient(supaUrl, supaServiceKey, {
+  const supabase = createClient(supaUrl as string, supaServiceKey as string, {
     auth: { persistSession: false },
   });
 
-  const obj = event.data.object as Record<string, unknown>;
+  const obj = event.data.object as unknown as Record<string, unknown>;
 
   switch (event.type) {
     case "checkout.session.completed": {
@@ -73,7 +67,7 @@ export async function POST(req: NextRequest) {
         (obj.client_reference_id as string | null) ??
         ((obj.metadata as Record<string, string> | null)?.user_id ?? null);
       const paymentStatus = obj.payment_status as string | undefined;
-      /* 支払い完了済みのセッションのみプレミアム化（"paid" または未指定 = 即時決済） */
+      /* 支払い完了済みのセッションのみプレミアム化 */
       if (userId && (!paymentStatus || paymentStatus === "paid")) {
         await supabase
           .from("profiles")
