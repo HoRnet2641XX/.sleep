@@ -49,11 +49,41 @@ export async function POST(req: NextRequest) {
     auth: { persistSession: false },
   });
 
-  /* 1. profiles.is_premium = true */
-  const { error: profileError } = await supabase
+  /* 0. プロフィール存在確認 (デバッグのため) */
+  const { data: existing, error: selectError } = await supabase
+    .from("profiles")
+    .select("id, is_premium")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (selectError) {
+    return NextResponse.json(
+      {
+        verified: false,
+        reason: "profile_select_failed",
+        details: selectError.message,
+      },
+      { status: 500 },
+    );
+  }
+  if (!existing) {
+    return NextResponse.json(
+      {
+        verified: false,
+        reason: "profile_not_found",
+        details: `No profile row for user_id=${userId}`,
+      },
+      { status: 404 },
+    );
+  }
+
+  /* 1. profiles.is_premium = true (.select で実際に更新された行を取得) */
+  const { data: updated, error: profileError } = await supabase
     .from("profiles")
     .update({ is_premium: true, updated_at: new Date().toISOString() })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id, is_premium")
+    .maybeSingle();
 
   if (profileError) {
     return NextResponse.json(
@@ -61,6 +91,21 @@ export async function POST(req: NextRequest) {
         verified: false,
         reason: "profile_update_failed",
         details: profileError.message,
+      },
+      { status: 500 },
+    );
+  }
+
+  /* 0行だった or is_premium が true になっていない = RLS で弾かれた可能性 */
+  if (!updated || !updated.is_premium) {
+    return NextResponse.json(
+      {
+        verified: false,
+        reason: "profile_update_no_effect",
+        details:
+          "profiles.is_premium was not set to true. SUPABASE_SERVICE_ROLE_KEY が正しく設定されているか確認してください。",
+        debugBefore: existing.is_premium,
+        debugAfter: updated?.is_premium ?? null,
       },
       { status: 500 },
     );

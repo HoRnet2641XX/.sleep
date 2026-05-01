@@ -70,15 +70,24 @@ function PremiumContent() {
           verified?: boolean;
           reason?: string;
           details?: string;
+          debugBefore?: boolean;
+          debugAfter?: boolean;
         };
         if (cancelled) return;
 
         if (!data.verified) {
-          setPaymentError(
-            data.reason === "no_paid_session"
-              ? "決済が確認できませんでした。決済が完了している場合は数分後に再度お試しください。"
-              : data.details ?? "決済の確認に失敗しました。",
-          );
+          /* reason ごとに分かりやすい文言を出し分ける */
+          let msg = data.details ?? "決済の確認に失敗しました。";
+          if (data.reason === "no_paid_session") {
+            msg = "決済が確認できませんでした。決済が完了している場合は数分後に再度お試しください。";
+          } else if (data.reason === "profile_not_found") {
+            msg = "プロフィール情報が見つかりません。再ログインしてもう一度お試しください。";
+          } else if (data.reason === "profile_update_no_effect") {
+            msg =
+              "プレミアム化に失敗しました（DB更新が反映されません）。" +
+              "Vercel の SUPABASE_SERVICE_ROLE_KEY が正しく設定されているか確認してください。";
+          }
+          setPaymentError(msg);
           setPaymentStatus("error");
           return;
         }
