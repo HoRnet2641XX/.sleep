@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       customer_email: email,
       client_reference_id: userId,
       metadata: { user_id: userId },
-      success_url: `${siteUrl}/premium?status=success`,
+      success_url: `${siteUrl}/premium?status=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/premium?status=canceled`,
       locale: "ja",
     });

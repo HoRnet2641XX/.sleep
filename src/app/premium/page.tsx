@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -28,11 +28,60 @@ function CheckIcon({ className }: { className?: string }) {
 }
 
 export default function PremiumPage() {
+  return (
+    <Suspense fallback={null}>
+      <PremiumContent />
+    </Suspense>
+  );
+}
+
+function PremiumContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const reduced = useReducedMotion();
   const { user } = useAuth();
   const { plan: currentPlan, isPremium } = useSubscription();
   const [processing, setProcessing] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+
+  /* Stripe Checkout から戻ってきた時の自動検証（Webhook フォールバック） */
+  useEffect(() => {
+    if (!user) return;
+    const status = searchParams?.get("status");
+    if (status !== "success") return;
+    if (isPremium) return; // 既にプレミアムなら何もしない
+
+    setVerifying(true);
+    setVerifyMessage("お支払いを確認しています...");
+
+    fetch("/api/stripe/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id }),
+    })
+      .then((r) => r.json())
+      .then((data: { verified?: boolean }) => {
+        if (data.verified) {
+          setVerifyMessage("プレミアムへのアップグレードが完了しました！");
+          /* useSubscription を最新化するためにリロード */
+          setTimeout(() => window.location.replace("/premium"), 1500);
+        } else {
+          setVerifyMessage(
+            "決済の確認に時間がかかっています。数分後にこのページを再読み込みしてください。",
+          );
+          setVerifying(false);
+        }
+      })
+      .catch(() => {
+        setVerifyMessage(
+          "確認に失敗しました。問題が続く場合はお問い合わせください。",
+        );
+        setVerifying(false);
+      });
+    /* user は遅延ロードなので user.id だけ依存 */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, searchParams?.get("status"), isPremium]);
 
   const handleSubscribe = async () => {
     if (!user) {
@@ -141,6 +190,16 @@ export default function PremiumPage() {
                 {devError}
               </p>
             )}
+          </div>
+        )}
+
+        {/* 決済戻り時の検証ステータス */}
+        {verifyMessage && (
+          <div className="mx-auto mb-6 max-w-md rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-center">
+            {verifying && (
+              <div className="mx-auto mb-2 h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            )}
+            <p className="text-sm text-primary">{verifyMessage}</p>
           </div>
         )}
 
