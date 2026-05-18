@@ -502,6 +502,115 @@ function Constellation({ animated }: { animated: boolean }) {
   );
 }
 
+function HomeScreenInstallSection({ animated }: { animated: boolean }) {
+  return (
+    <section className="relative z-10 border-t border-border/20 py-24">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at 18% 45%, rgba(169,143,216,0.05) 0%, transparent 44%), radial-gradient(ellipse at 82% 70%, rgba(245,184,61,0.04) 0%, transparent 42%)",
+        }}
+      />
+      <div className="relative mx-auto grid max-w-page items-center gap-10 px-5 md:grid-cols-[1.05fr_0.95fr]">
+        <motion.div
+          initial={animated ? { opacity: 0, y: 24 } : { opacity: 1 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: animated ? 0.65 : 0.01, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <p className="mb-4 text-xs font-medium uppercase tracking-[0.3em] text-primary/70">
+            home screen
+          </p>
+          <h2 className="mb-5 text-2xl font-bold leading-tight text-content md:text-3xl">
+            アプリストアを待たずに、
+            <br />
+            今夜のホーム画面へ。
+          </h2>
+          <p className="max-w-sm text-sm leading-[1.9] text-content-secondary">
+            SafariやChromeで開いて、
+            <br />
+            <span className="font-medium text-content">
+              共有ボタン → ホーム画面に追加。
+            </span>
+            <br />
+            .nemuriを、いつものアプリのように置いておけます。
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={animated ? { opacity: 0, y: 32 } : { opacity: 1 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{
+            delay: animated ? 0.1 : 0,
+            duration: animated ? 0.7 : 0.01,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+          className="rounded-2xl border border-border/40 bg-surface-card/80 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.22)] backdrop-blur-sm"
+        >
+          <div className="mb-5 flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+                <path d="M10.5 18.5h3" strokeLinecap="round" />
+              </svg>
+            </span>
+            <div>
+              <h3 className="text-base font-bold text-content">
+                眠れない夜に、すぐ戻れる
+              </h3>
+              <p className="mt-1 text-xs text-content-muted">
+                ブックマークより近い場所へ
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {[
+              {
+                label: "共有ボタンを開く",
+                icon: (
+                  <path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M5 11v7a2 2 0 002 2h10a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round" />
+                ),
+              },
+              {
+                label: "ホーム画面に追加",
+                icon: (
+                  <>
+                    <rect x="4" y="4" width="16" height="16" rx="3" />
+                    <path d="M12 8v8M8 12h8" strokeLinecap="round" />
+                  </>
+                ),
+              },
+              {
+                label: ".nemuriを開く",
+                icon: (
+                  <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                ),
+              },
+            ].map((step, index) => (
+              <div
+                key={step.label}
+                className="flex items-center gap-3 rounded-lg border border-border/40 bg-surface-elevated/45 px-4 py-3"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface text-content-muted ring-1 ring-border/40">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                    {step.icon}
+                  </svg>
+                </span>
+                <span className="text-sm font-medium text-content-secondary">
+                  {index + 1}. {step.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
 /* ════════════════════════════════════════════
    LP 本体
    ════════════════════════════════════════════ */
@@ -849,7 +958,10 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ─── 7. CTA: 夜明け ─── */}
+      {/* ─── 7. ホーム画面追加 — PWA導線 ─── */}
+      <HomeScreenInstallSection animated={animated} />
+
+      {/* ─── 8. CTA: 夜明け ─── */}
       <section className="relative z-10 overflow-hidden py-28">
         {/* アンバーグロー: 夜明けの比喩 */}
         <div
