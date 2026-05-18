@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/api/og",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: ".nemuri",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     title: ".nemuri — 眠れない夜を、ひとりにしない",
     description:
       "睡眠障害を抱える人同士が「自分に効いたもの」を共有し合うプラットフォーム。",
-    images: ["/api/og"],
+    images: ["/og-image.png"],
   },
 };
 
