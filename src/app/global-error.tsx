@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { logDevError } from "@/lib/devLogger";
 
 /**
  * Root layout 自体がクラッシュした場合のフォールバック。
@@ -14,9 +15,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[app/global-error.tsx]", error);
-    }
+    logDevError("[app/global-error.tsx]", error);
   }, [error]);
 
   return (
@@ -37,9 +36,7 @@ export default function GlobalError({
           textAlign: "center",
         }}
       >
-        <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
-          予期せぬエラーが発生しました
-        </h1>
+        <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>予期せぬエラーが発生しました</h1>
         <p style={{ fontSize: 13, color: "#9A9BBA", margin: 0 }}>
           時間をおいてもう一度お試しください。
         </p>

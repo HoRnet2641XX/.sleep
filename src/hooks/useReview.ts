@@ -2,42 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { mapReviewRow } from "@/lib/mappers";
 import { useAuth } from "@/hooks/useAuth";
-import type { ReviewWithUser, ReviewCategory, EffectLevel, UsagePeriod, SleepDisorderType, ComparisonItem } from "@/types";
-
-/** DB行 → フロント型への変換 */
-function mapReview(row: Record<string, unknown>, user: Record<string, unknown>): ReviewWithUser {
-  return {
-    id: row.id as string,
-    userId: row.user_id as string,
-    category: row.category as ReviewCategory,
-    productName: row.product_name as string,
-    rating: row.rating as number,
-    effectLevel: row.effect_level as EffectLevel,
-    usagePeriod: row.usage_period as UsagePeriod,
-    body: row.body as string,
-    imageUrls: (row.image_urls as string[]) ?? [],
-    referenceUrl: (row.reference_url as string) ?? null,
-    comparisonItems: (row.comparison_items as ComparisonItem[]) ?? [],
-    likesCount: row.likes_count as number,
-    commentsCount: row.comments_count as number,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
-    user: {
-      id: user.id as string,
-      nickname: user.nickname as string,
-      avatarUrl: (user.avatar_url as string) ?? null,
-      height: (user.height as number) ?? null,
-      weight: (user.weight as number) ?? null,
-      gender: (user.gender as ReviewWithUser["user"]["gender"]) ?? null,
-      ageGroup: (user.age_group as string) ?? null,
-      sleepDisorderTypes: (user.sleep_disorder_types as SleepDisorderType[]) ?? [],
-      cause: (user.cause as string) ?? null,
-      createdAt: user.created_at as string,
-      updatedAt: user.updated_at as string,
-    },
-  };
-}
+import type { ReviewWithUser } from "@/types";
 
 /** レビュー詳細データ取得フック */
 export function useReview(reviewId: string) {
@@ -64,8 +31,7 @@ export function useReview(reviewId: string) {
       if (fetchError) throw fetchError;
       if (!data) throw new Error("レビューが見つかりません");
 
-      const profile = data.profiles as Record<string, unknown>;
-      setReview(mapReview(data, profile));
+      setReview(mapReviewRow(data as Record<string, unknown>));
 
       // ログイン中ならいいね/ブックマーク状態を取得
       if (authUser) {
@@ -106,30 +72,20 @@ export function useReview(reviewId: string) {
     const wasLiked = liked;
     setLiked(!wasLiked);
     setReview((prev) =>
-      prev
-        ? { ...prev, likesCount: prev.likesCount + (wasLiked ? -1 : 1) }
-        : prev,
+      prev ? { ...prev, likesCount: prev.likesCount + (wasLiked ? -1 : 1) } : prev,
     );
 
     try {
       if (wasLiked) {
-        await supabase
-          .from("likes")
-          .delete()
-          .eq("review_id", review.id)
-          .eq("user_id", authUser.id);
+        await supabase.from("likes").delete().eq("review_id", review.id).eq("user_id", authUser.id);
       } else {
-        await supabase
-          .from("likes")
-          .insert({ review_id: review.id, user_id: authUser.id });
+        await supabase.from("likes").insert({ review_id: review.id, user_id: authUser.id });
       }
     } catch {
       // ロールバック
       setLiked(wasLiked);
       setReview((prev) =>
-        prev
-          ? { ...prev, likesCount: prev.likesCount + (wasLiked ? 1 : -1) }
-          : prev,
+        prev ? { ...prev, likesCount: prev.likesCount + (wasLiked ? 1 : -1) } : prev,
       );
     }
   }, [authUser, review, liked]);
@@ -149,9 +105,7 @@ export function useReview(reviewId: string) {
           .eq("review_id", review.id)
           .eq("user_id", authUser.id);
       } else {
-        await supabase
-          .from("bookmarks")
-          .insert({ review_id: review.id, user_id: authUser.id });
+        await supabase.from("bookmarks").insert({ review_id: review.id, user_id: authUser.id });
       }
     } catch {
       setBookmarked(wasBookmarked);

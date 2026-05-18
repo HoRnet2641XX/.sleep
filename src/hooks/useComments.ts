@@ -2,32 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { mapCommentRow } from "@/lib/mappers";
 import { useAuth } from "@/hooks/useAuth";
-import type { CommentWithUser, SleepDisorderType } from "@/types";
-
-/** DB行 → フロント型への変換 */
-function mapComment(row: Record<string, unknown>, profile: Record<string, unknown>): CommentWithUser {
-  return {
-    id: row.id as string,
-    reviewId: row.review_id as string,
-    userId: row.user_id as string,
-    body: row.body as string,
-    createdAt: row.created_at as string,
-    user: {
-      id: profile.id as string,
-      nickname: profile.nickname as string,
-      avatarUrl: (profile.avatar_url as string) ?? null,
-      height: (profile.height as number) ?? null,
-      weight: (profile.weight as number) ?? null,
-      gender: (profile.gender as CommentWithUser["user"]["gender"]) ?? null,
-      ageGroup: (profile.age_group as string) ?? null,
-      sleepDisorderTypes: (profile.sleep_disorder_types as SleepDisorderType[]) ?? [],
-      cause: (profile.cause as string) ?? null,
-      createdAt: profile.created_at as string,
-      updatedAt: profile.updated_at as string,
-    },
-  };
-}
+import type { CommentWithUser } from "@/types";
 
 /** コメント一覧取得フック */
 export function useComments(reviewId: string) {
@@ -51,10 +28,7 @@ export function useComments(reviewId: string) {
 
       if (fetchError) throw fetchError;
 
-      const mapped = (data ?? []).map((row) => {
-        const profile = row.profiles as Record<string, unknown>;
-        return mapComment(row, profile);
-      });
+      const mapped = (data ?? []).map((row) => mapCommentRow(row as Record<string, unknown>));
 
       setComments(mapped);
     } catch (err) {

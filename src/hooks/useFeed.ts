@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { mapReviewRow } from "@/lib/mapReview";
+import { mapReviewRows } from "@/lib/mappers";
 import type { ReviewCategory, ReviewWithUser } from "@/types";
 
 export type SortKey = "new" | "popular" | "following";
@@ -44,11 +44,7 @@ export function useFeed(
         query = query.eq("category", category);
       }
       const { data } = await query;
-      setReviews(
-        (data ?? []).map((row) =>
-          mapReviewRow(row as Record<string, unknown>),
-        ),
-      );
+      setReviews(mapReviewRows(data));
       clearTimeout(timeout);
       setLoading(false);
       return;
@@ -65,11 +61,7 @@ export function useFeed(
     }
     query = query.limit(50);
     const { data } = await query;
-    setReviews(
-      (data ?? []).map((row) =>
-        mapReviewRow(row as Record<string, unknown>),
-      ),
-    );
+    setReviews(mapReviewRows(data));
     clearTimeout(timeout);
     setLoading(false);
   }, [category, sortBy, userId]);

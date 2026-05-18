@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { mapReviewRow } from "@/lib/mapReview";
+import { mapReviewRow } from "@/lib/mappers";
 import type { ReviewWithUser, SleepDisorderType } from "@/types";
 import { SLEEP_DISORDER_LABELS } from "@/types";
 
@@ -22,57 +22,71 @@ export function useMatchNotifications(userId: string | undefined) {
 
   useEffect(() => {
     if (!userId) {
+      setNotifications([]);
       setLoading(false);
       return;
     }
 
+    let cancelled = false;
+
     (async () => {
-      // 1. 自分の sleep_disorder_types を取得
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("sleep_disorder_types")
-        .eq("id", userId)
-        .maybeSingle();
+      setLoading(true);
 
-      const myTypes = (profile?.sleep_disorder_types as SleepDisorderType[]) ?? [];
-      if (myTypes.length === 0) {
-        setLoading(false);
-        return;
-      }
+      try {
+        // 1. 自分の sleep_disorder_types を取得
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("sleep_disorder_types")
+          .eq("id", userId)
+          .maybeSingle();
 
-      // 2. 同じ症状タイプを持つユーザーの48h以内のレビューを取得
-      const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-      const { data: reviews } = await supabase
-        .from("reviews")
-        .select("*, profiles(*)")
-        .gte("created_at", since)
-        .neq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (!reviews || reviews.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // 3. 投稿者の症状タイプと自分の症状タイプの交差をチェック
-      const matched: MatchNotification[] = [];
-      for (const row of reviews) {
-        const reviewData = mapReviewRow(row as Record<string, unknown>);
-        const authorTypes = reviewData.user.sleepDisorderTypes;
-        const overlap = myTypes.filter((t) => authorTypes.includes(t));
-        if (overlap.length > 0) {
-          matched.push({
-            review: reviewData,
-            matchedTypes: overlap,
-            label: overlap.map((t) => SLEEP_DISORDER_LABELS[t]).join("・"),
-          });
+        const myTypes = (profile?.sleep_disorder_types as SleepDisorderType[]) ?? [];
+        if (myTypes.length === 0) {
+          if (!cancelled) setNotifications([]);
+          return;
         }
-      }
 
-      setNotifications(matched.slice(0, 5));
-      setLoading(false);
+        // 2. 同じ症状タイプを持つユーザーの48h以内のレビューを取得
+        const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+        const { data: reviews } = await supabase
+          .from("reviews")
+          .select("*, profiles(*)")
+          .gte("created_at", since)
+          .neq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        if (!reviews || reviews.length === 0) {
+          if (!cancelled) setNotifications([]);
+          return;
+        }
+
+        // 3. 投稿者の症状タイプと自分の症状タイプの交差をチェック
+        const matched = reviews.flatMap((row): MatchNotification[] => {
+          const reviewData = mapReviewRow(row as Record<string, unknown>);
+          const authorTypes = reviewData.user.sleepDisorderTypes;
+          const overlap = myTypes.filter((type) => authorTypes.includes(type));
+
+          if (overlap.length === 0) return [];
+
+          return [
+            {
+              review: reviewData,
+              matchedTypes: overlap,
+              label: overlap.map((type) => SLEEP_DISORDER_LABELS[type]).join("・"),
+            },
+          ];
+        });
+
+        if (!cancelled) setNotifications(matched.slice(0, 5));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   return { notifications, loading };

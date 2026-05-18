@@ -2,55 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { mapProfileRow, mapReviewBaseRow } from "@/lib/mappers";
 import { useAuth } from "@/hooks/useAuth";
-import type {
-  UserProfile,
-  Review,
-  ReviewCategory,
-  EffectLevel,
-  UsagePeriod,
-  ComparisonItem,
-  Gender,
-  SleepDisorderType,
-} from "@/types";
-
-/** DB行 → UserProfile */
-function mapProfile(row: Record<string, unknown>): UserProfile {
-  return {
-    id: row.id as string,
-    nickname: row.nickname as string,
-    avatarUrl: (row.avatar_url as string) ?? null,
-    height: (row.height as number) ?? null,
-    weight: (row.weight as number) ?? null,
-    gender: (row.gender as Gender) ?? null,
-    ageGroup: (row.age_group as string) ?? null,
-    sleepDisorderTypes: (row.sleep_disorder_types as SleepDisorderType[]) ?? [],
-    cause: (row.cause as string) ?? null,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
-  };
-}
-
-/** DB行 → Review */
-function mapReview(row: Record<string, unknown>): Review {
-  return {
-    id: row.id as string,
-    userId: row.user_id as string,
-    category: row.category as ReviewCategory,
-    productName: row.product_name as string,
-    rating: row.rating as number,
-    effectLevel: row.effect_level as EffectLevel,
-    usagePeriod: row.usage_period as UsagePeriod,
-    body: row.body as string,
-    imageUrls: (row.image_urls as string[]) ?? [],
-    referenceUrl: (row.reference_url as string) ?? null,
-    comparisonItems: (row.comparison_items as ComparisonItem[]) ?? [],
-    likesCount: row.likes_count as number,
-    commentsCount: row.comments_count as number,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
-  };
-}
+import type { UserProfile, Review, Gender, SleepDisorderType } from "@/types";
 
 /** プロフィール更新用データ型 */
 export interface ProfileUpdateData {
@@ -93,9 +47,9 @@ export function useProfile(userId: string) {
       if (profileRes.error) throw profileRes.error;
       if (!profileRes.data) throw new Error("プロフィールが見つかりません");
 
-      const mappedProfile = mapProfile(profileRes.data);
+      const mappedProfile = mapProfileRow(profileRes.data);
       const mappedReviews = (reviewsRes.data ?? []).map((r) =>
-        mapReview(r as Record<string, unknown>),
+        mapReviewBaseRow(r as Record<string, unknown>),
       );
 
       // いいね総数を計算

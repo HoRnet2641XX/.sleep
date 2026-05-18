@@ -8,7 +8,7 @@ import { AuthGuard } from "@/components/features/AuthGuard";
 import { ReviewCard } from "@/components/features/ReviewCard";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { mapReviewRow } from "@/lib/mapReview";
+import { mapReviewRow } from "@/lib/mappers";
 import type { ReviewWithUser } from "@/types";
 
 function BookmarksContent() {
@@ -50,7 +50,14 @@ function BookmarksContent() {
             className="flex items-center text-content-secondary hover:text-content"
             aria-label="ホームに戻る"
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
               <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </Link>
@@ -69,12 +76,21 @@ function BookmarksContent() {
           </div>
         ) : reviews.length === 0 ? (
           <div className="rounded-xl border border-border/40 bg-surface-card/50 px-6 py-12 text-center">
-            <svg className="mx-auto mb-4 h-12 w-12 text-content-muted/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round" />
+            <svg
+              className="mx-auto mb-4 h-12 w-12 text-content-muted/40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
+              <path
+                d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
-            <p className="mb-2 text-sm font-medium text-content">
-              まだブックマークがありません
-            </p>
+            <p className="mb-2 text-sm font-medium text-content">まだブックマークがありません</p>
             <p className="text-xs text-content-secondary">
               気になるレビューを保存すると、ここに表示されます
             </p>

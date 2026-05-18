@@ -5,6 +5,8 @@
  * 開発時は元メッセージを console に出すが、UI では汎用文を返す。
  */
 
+import { logDevError } from "@/lib/devLogger";
+
 export type SafeError = {
   /** ユーザーに表示する汎用メッセージ */
   message: string;
@@ -31,9 +33,7 @@ const FRIENDLY_MAP: Record<string, string> = {
 const FALLBACK = "処理に失敗しました。時間をおいてもう一度お試しください";
 
 export function sanitizeError(err: unknown): SafeError {
-  if (process.env.NODE_ENV !== "production") {
-    console.error("[sanitizeError]", err);
-  }
+  logDevError("[sanitizeError]", err);
 
   if (!err || typeof err !== "object") {
     return { message: FALLBACK };
@@ -46,8 +46,7 @@ export function sanitizeError(err: unknown): SafeError {
   /* メッセージから既知パターンを抽出 */
   const msg = e.message ?? "";
   if (/duplicate key/i.test(msg)) return { message: "既に登録されています", code };
-  if (/violates check constraint/i.test(msg))
-    return { message: "入力内容に問題があります", code };
+  if (/violates check constraint/i.test(msg)) return { message: "入力内容に問題があります", code };
   if (/Rate limit/i.test(msg))
     return { message: "操作が多すぎます。少し時間をおいてからお試しください", code };
   if (/permission denied|RLS|row-level security/i.test(msg))

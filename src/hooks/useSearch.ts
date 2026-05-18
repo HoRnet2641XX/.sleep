@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { mapReviewRow } from "@/lib/mapReview";
+import { mapReviewRows } from "@/lib/mappers";
 import type { ReviewWithUser } from "@/types";
 
 /** PostgREST の or フィルタに埋め込めない文字を除去 */
 function sanitizeSearchQuery(raw: string): string {
-  return raw.replace(/[%,()*\\]/g, " ").replace(/\s+/g, " ").trim();
+  return raw
+    .replace(/[%,()*\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function useSearch() {
@@ -31,11 +34,7 @@ export function useSearch() {
         .or(`product_name.ilike.%${safeQuery}%,body.ilike.%${safeQuery}%`)
         .order("likes_count", { ascending: false })
         .limit(30);
-      setResults(
-        (data ?? []).map((row) =>
-          mapReviewRow(row as Record<string, unknown>),
-        ),
-      );
+      setResults(mapReviewRows(data));
       setSearching(false);
     }, 300);
     return () => clearTimeout(timer);

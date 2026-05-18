@@ -7,6 +7,20 @@ import type { ReviewWithUser } from "@/types";
 import { PLANS } from "@/types";
 import { useSubscription } from "@/hooks/useSubscription";
 
+function updateIdMembership(ids: Set<string>, id: string, shouldInclude: boolean): Set<string> {
+  const next = new Set(ids);
+  if (shouldInclude) next.add(id);
+  else next.delete(id);
+  return next;
+}
+
+function withLikeDelta(reviewId: string, delta: number) {
+  return (list: ReviewWithUser[]) =>
+    list.map((review) =>
+      review.id === reviewId ? { ...review, likesCount: review.likesCount + delta } : review,
+    );
+}
+
 /**
  * レビューリストに対する like / bookmark の状態管理。
  * 楽観的更新 + ロールバック付き。
@@ -40,14 +54,14 @@ export function useInteractions(
     })();
   }, [userId]);
 
-  // ID の join 文字列を安定キーにして無限ループを防ぐ
-  const displayReviewIds = useMemo(
-    () => displayReviews.map((r) => r.id),
+  const displayReviewKey = useMemo(
+    () => displayReviews.map((review) => review.id).join(","),
     [displayReviews],
   );
-  const displayReviewKey = displayReviewIds.join(",");
 
   useEffect(() => {
+    const displayReviewIds = displayReviewKey ? displayReviewKey.split(",") : [];
+
     if (!userId || displayReviewIds.length === 0) {
       setLikedIds(new Set());
       setSavedIds(new Set());
@@ -68,17 +82,12 @@ export function useInteractions(
           .in("review_id", displayReviewIds),
       ]);
       if (cancelled) return;
-      setLikedIds(
-        new Set((likeRes.data ?? []).map((r) => r.review_id as string)),
-      );
-      setSavedIds(
-        new Set((bookmarkRes.data ?? []).map((r) => r.review_id as string)),
-      );
+      setLikedIds(new Set((likeRes.data ?? []).map((r) => r.review_id as string)));
+      setSavedIds(new Set((bookmarkRes.data ?? []).map((r) => r.review_id as string)));
     })();
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, displayReviewKey]);
 
   /** いいねトグル */
@@ -89,45 +98,21 @@ export function useInteractions(
         return;
       }
       const wasLiked = likedIds.has(reviewId);
-      setLikedIds((prev) => {
-        const next = new Set(prev);
-        if (wasLiked) next.delete(reviewId);
-        else next.add(reviewId);
-        return next;
-      });
+      setLikedIds((prev) => updateIdMembership(prev, reviewId, !wasLiked));
       const delta = wasLiked ? -1 : 1;
-      const updater = (list: ReviewWithUser[]) =>
-        list.map((r) =>
-          r.id === reviewId ? { ...r, likesCount: r.likesCount + delta } : r,
-        );
+      const updater = withLikeDelta(reviewId, delta);
       setReviews(updater);
       setSearchResults(updater);
 
       try {
         if (wasLiked) {
-          await supabase
-            .from("likes")
-            .delete()
-            .eq("review_id", reviewId)
-            .eq("user_id", userId);
+          await supabase.from("likes").delete().eq("review_id", reviewId).eq("user_id", userId);
         } else {
-          await supabase
-            .from("likes")
-            .insert({ review_id: reviewId, user_id: userId });
+          await supabase.from("likes").insert({ review_id: reviewId, user_id: userId });
         }
       } catch {
-        setLikedIds((prev) => {
-          const next = new Set(prev);
-          if (wasLiked) next.add(reviewId);
-          else next.delete(reviewId);
-          return next;
-        });
-        const revert = (list: ReviewWithUser[]) =>
-          list.map((r) =>
-            r.id === reviewId
-              ? { ...r, likesCount: r.likesCount - delta }
-              : r,
-          );
+        setLikedIds((prev) => updateIdMembership(prev, reviewId, wasLiked));
+        const revert = withLikeDelta(reviewId, -delta);
         setReviews(revert);
         setSearchResults(revert);
       }
@@ -148,45 +133,34 @@ export function useInteractions(
       if (!wasSaved && !isPremium) {
         const limit = PLANS.free.limits.bookmarks;
         if (totalBookmarks >= limit) {
-          setBookmarkLimitError(
-            `ブックマークは${limit}件まで（プレミアムで無制限）`,
-          );
+          setBookmarkLimitError(`ブックマークは${limit}件まで（プレミアムで無制限）`);
           setTimeout(() => setBookmarkLimitError(null), 4000);
           return;
         }
       }
 
-      setSavedIds((prev) => {
-        const next = new Set(prev);
-        if (wasSaved) next.delete(reviewId);
-        else next.add(reviewId);
-        return next;
-      });
+      setSavedIds((prev) => updateIdMembership(prev, reviewId, !wasSaved));
       try {
         if (wasSaved) {
-          await supabase
-            .from("bookmarks")
-            .delete()
-            .eq("review_id", reviewId)
-            .eq("user_id", userId);
+          await supabase.from("bookmarks").delete().eq("review_id", reviewId).eq("user_id", userId);
           setTotalBookmarks((n) => Math.max(0, n - 1));
         } else {
-          await supabase
-            .from("bookmarks")
-            .insert({ review_id: reviewId, user_id: userId });
+          await supabase.from("bookmarks").insert({ review_id: reviewId, user_id: userId });
           setTotalBookmarks((n) => n + 1);
         }
       } catch {
-        setSavedIds((prev) => {
-          const next = new Set(prev);
-          if (wasSaved) next.add(reviewId);
-          else next.delete(reviewId);
-          return next;
-        });
+        setSavedIds((prev) => updateIdMembership(prev, reviewId, wasSaved));
       }
     },
     [userId, savedIds, router, isPremium, totalBookmarks],
   );
 
-  return { likedIds, savedIds, toggleLike, toggleBookmark, bookmarkLimitError, totalBookmarks };
+  return {
+    likedIds,
+    savedIds,
+    toggleLike,
+    toggleBookmark,
+    bookmarkLimitError,
+    totalBookmarks,
+  };
 }
