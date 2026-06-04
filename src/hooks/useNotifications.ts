@@ -44,12 +44,12 @@ export function useNotifications(userId: string | undefined) {
     let actorMap: Record<string, { nickname: string | null; avatarUrl: string | null }> = {};
     if (actorIds.length > 0) {
       const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, nickname, avatar_url")
-        .in("id", actorIds);
+        .from("public_profiles")
+        .select("user_id, nickname, avatar_url")
+        .in("user_id", actorIds);
       actorMap = Object.fromEntries(
         (profs ?? []).map((p) => [
-          p.id as string,
+          p.user_id as string,
           { nickname: p.nickname as string | null, avatarUrl: p.avatar_url as string | null },
         ]),
       );

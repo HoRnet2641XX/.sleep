@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { mapReviewRows } from "@/lib/mappers";
+import { mapReviewRowsWithPublicProfiles } from "@/lib/publicProfiles";
 import type { ReviewWithUser } from "@/types";
 
 /** PostgREST の or フィルタに埋め込めない文字を除去 */
@@ -30,11 +30,11 @@ export function useSearch() {
     const timer = setTimeout(async () => {
       const { data } = await supabase
         .from("reviews")
-        .select("*, profiles(*)")
+        .select("*")
         .or(`product_name.ilike.%${safeQuery}%,body.ilike.%${safeQuery}%`)
         .order("likes_count", { ascending: false })
         .limit(30);
-      setResults(mapReviewRows(data));
+      setResults(await mapReviewRowsWithPublicProfiles(data));
       setSearching(false);
     }, 300);
     return () => clearTimeout(timer);

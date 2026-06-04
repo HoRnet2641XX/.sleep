@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import { rememberOAuthIntent, trackEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase";
 
 interface FormErrors {
@@ -90,8 +91,7 @@ export default function LoginPage() {
 
   const handleBlur = useCallback(
     (field: "email" | "password") => {
-      const error =
-        field === "email" ? validateEmail(email) : validatePassword(password);
+      const error = field === "email" ? validateEmail(email) : validatePassword(password);
       setErrors((prev) => ({ ...prev, [field]: error }));
     },
     [email, password],
@@ -107,6 +107,7 @@ export default function LoginPage() {
 
     if (emailError || passwordError) return;
 
+    trackEvent("login_click", { method: "email", location: "login_page" });
     setSubmitting(true);
     const { error } = await signIn(email, password);
 
@@ -134,18 +135,27 @@ export default function LoginPage() {
           nickname: defaultNickname,
         });
         setSubmitting(false);
+        trackEvent("login_complete", { method: "email", next: "profile_setup" });
         router.push("/profile/setup");
         return;
       }
     }
 
     setSubmitting(false);
+    trackEvent("login_complete", { method: "email", next: "home" });
     router.push("/");
   };
 
   const handleOAuth = async (provider: "google" | "x") => {
+    trackEvent("oauth_click", { provider, intent: "login", location: "login_page" });
+    rememberOAuthIntent(provider, "login");
+    trackEvent("oauth_start", { provider, intent: "login" });
     setOauthLoading(provider);
-    await signInWithOAuth(provider);
+    const { error } = await signInWithOAuth(provider);
+    if (error) {
+      setOauthLoading(null);
+      return;
+    }
   };
 
   return (
@@ -175,11 +185,7 @@ export default function LoginPage() {
               onClick={() => handleOAuth("google")}
               disabled={oauthLoading !== null}
             >
-              {oauthLoading === "google" ? (
-                <Spinner />
-              ) : (
-                <GoogleIcon className="h-5 w-5" />
-              )}
+              {oauthLoading === "google" ? <Spinner /> : <GoogleIcon className="h-5 w-5" />}
               Googleでログイン
             </button>
 
@@ -189,11 +195,7 @@ export default function LoginPage() {
               onClick={() => handleOAuth("x")}
               disabled={oauthLoading !== null}
             >
-              {oauthLoading === "x" ? (
-                <Spinner />
-              ) : (
-                <XIcon className="h-4 w-4" />
-              )}
+              {oauthLoading === "x" ? <Spinner /> : <XIcon className="h-4 w-4" />}
               Xでログイン
             </button>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +11,7 @@ import { PeriodSelector } from "@/components/features/PeriodSelector";
 import { StarRating } from "@/components/ui/StarRating";
 import { useReviewForm, emptyComparisonItem } from "@/hooks/useReviewForm";
 import { useSubscription } from "@/hooks/useSubscription";
+import { trackEvent } from "@/lib/analytics";
 import type { ReviewCategory, EffectLevel, UsagePeriod, ComparisonItem } from "@/types";
 
 const BODY_MAX_LENGTH = 2000;
@@ -37,12 +38,31 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
       aria-live="polite"
     >
       <div className="flex items-center gap-2">
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <svg
+          className="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
           <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         {message}
-        <button type="button" onClick={onClose} className="ml-2 text-navy-900/60 hover:text-navy-900" aria-label="閉じる">
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <button
+          type="button"
+          onClick={onClose}
+          className="ml-2 text-navy-900/60 hover:text-navy-900"
+          aria-label="閉じる"
+        >
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
             <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
@@ -95,10 +115,17 @@ function ComparisonRow({
           className="input w-1/2 text-sm"
           placeholder="価格 (円)"
           value={item.price ?? ""}
-          onChange={(e) => onChange(index, { ...item, price: e.target.value ? Number(e.target.value) : null })}
+          onChange={(e) =>
+            onChange(index, { ...item, price: e.target.value ? Number(e.target.value) : null })
+          }
         />
         <div className="flex items-center gap-1">
-          <StarRating rating={item.rating} size="sm" interactive onChange={(r) => onChange(index, { ...item, rating: r })} />
+          <StarRating
+            rating={item.rating}
+            size="sm"
+            interactive
+            onChange={(r) => onChange(index, { ...item, rating: r })}
+          />
         </div>
       </div>
       <input
@@ -118,6 +145,10 @@ function PostForm() {
   const { form, errors, submitting, submitError, setField, validateAll, submit } = useReviewForm();
   const { isPremium } = useSubscription();
   const [toast, setToast] = useState(false);
+
+  useEffect(() => {
+    trackEvent("review_start", { location: "post_page" });
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     // まずバリデーション — 不備があればエラー表示して止める
@@ -146,7 +177,10 @@ function PostForm() {
 
   const removeImageUrl = useCallback(
     (index: number) => {
-      setField("imageUrls", form.imageUrls.filter((_, i) => i !== index));
+      setField(
+        "imageUrls",
+        form.imageUrls.filter((_, i) => i !== index),
+      );
     },
     [form.imageUrls, setField],
   );
@@ -167,7 +201,10 @@ function PostForm() {
 
   const removeComparison = useCallback(
     (index: number) => {
-      setField("comparisonItems", form.comparisonItems.filter((_, i) => i !== index));
+      setField(
+        "comparisonItems",
+        form.comparisonItems.filter((_, i) => i !== index),
+      );
     },
     [form.comparisonItems, setField],
   );
@@ -215,8 +252,15 @@ function PostForm() {
             <legend className="mb-2 text-sm font-medium text-content">
               カテゴリ <span className="text-error">*</span>
             </legend>
-            <CategorySelector value={form.category} onChange={(cat: ReviewCategory) => setField("category", cat)} />
-            {errors.category && <p className="mt-1 text-sm text-error" role="alert">{errors.category}</p>}
+            <CategorySelector
+              value={form.category}
+              onChange={(cat: ReviewCategory) => setField("category", cat)}
+            />
+            {errors.category && (
+              <p className="mt-1 text-sm text-error" role="alert">
+                {errors.category}
+              </p>
+            )}
           </motion.fieldset>
 
           {/* 薬カテゴリ注意バナー */}
@@ -229,10 +273,23 @@ function PostForm() {
                 className="flex items-start gap-3 overflow-hidden rounded-lg border border-amber-400/30 bg-amber-500/10 px-4 py-3"
                 role="note"
               >
-                <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M12 9v4m0 4h.01M12 2L2 22h20L12 2z" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  className="mt-0.5 h-4 w-4 shrink-0 text-amber-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 9v4m0 4h.01M12 2L2 22h20L12 2z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
-                <p className="text-sm text-amber-300">薬に関するレビューには「個人の感想です」の注記が自動で付きます。</p>
+                <p className="text-sm text-amber-300">
+                  薬に関するレビューには「個人の感想です」の注記が自動で付きます。
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -242,38 +299,103 @@ function PostForm() {
             <label htmlFor="productName" className="mb-2 block text-sm font-medium text-content">
               商品名・方法 <span className="text-error">*</span>
             </label>
-            <input id="productName" type="text" className="input w-full" placeholder="例: メラトニンサプリ 3mg" value={form.productName} onChange={(e) => setField("productName", e.target.value)} aria-invalid={!!errors.productName} aria-describedby={errors.productName ? "productName-error" : undefined} />
-            {errors.productName && <p id="productName-error" className="mt-1 text-sm text-error" role="alert">{errors.productName}</p>}
+            <input
+              id="productName"
+              type="text"
+              className="input w-full"
+              placeholder="例: メラトニンサプリ 3mg"
+              value={form.productName}
+              onChange={(e) => setField("productName", e.target.value)}
+              aria-invalid={!!errors.productName}
+              aria-describedby={errors.productName ? "productName-error" : undefined}
+            />
+            {errors.productName && (
+              <p id="productName-error" className="mt-1 text-sm text-error" role="alert">
+                {errors.productName}
+              </p>
+            )}
           </motion.div>
 
           {/* 評価 */}
           <motion.fieldset custom={2} variants={sectionVariants} initial="hidden" animate="visible">
-            <legend className="mb-2 text-sm font-medium text-content">評価 <span className="text-error">*</span></legend>
-            <StarRating rating={form.rating} size="md" interactive onChange={(r: number) => setField("rating", r)} />
-            {errors.rating && <p className="mt-1 text-sm text-error" role="alert">{errors.rating}</p>}
+            <legend className="mb-2 text-sm font-medium text-content">
+              評価 <span className="text-error">*</span>
+            </legend>
+            <StarRating
+              rating={form.rating}
+              size="md"
+              interactive
+              onChange={(r: number) => setField("rating", r)}
+            />
+            {errors.rating && (
+              <p className="mt-1 text-sm text-error" role="alert">
+                {errors.rating}
+              </p>
+            )}
           </motion.fieldset>
 
           {/* 効果の実感 */}
           <motion.fieldset custom={3} variants={sectionVariants} initial="hidden" animate="visible">
-            <legend className="mb-2 text-sm font-medium text-content">効果の実感 <span className="text-error">*</span></legend>
-            <EffectSelector value={form.effectLevel} onChange={(l: EffectLevel) => setField("effectLevel", l)} />
-            {errors.effectLevel && <p className="mt-1 text-sm text-error" role="alert">{errors.effectLevel}</p>}
+            <legend className="mb-2 text-sm font-medium text-content">
+              効果の実感 <span className="text-error">*</span>
+            </legend>
+            <EffectSelector
+              value={form.effectLevel}
+              onChange={(l: EffectLevel) => setField("effectLevel", l)}
+            />
+            {errors.effectLevel && (
+              <p className="mt-1 text-sm text-error" role="alert">
+                {errors.effectLevel}
+              </p>
+            )}
           </motion.fieldset>
 
           {/* 使用期間 */}
           <motion.fieldset custom={4} variants={sectionVariants} initial="hidden" animate="visible">
-            <legend className="mb-2 text-sm font-medium text-content">使用期間 <span className="text-error">*</span></legend>
-            <PeriodSelector value={form.usagePeriod} onChange={(p: UsagePeriod) => setField("usagePeriod", p)} />
-            {errors.usagePeriod && <p className="mt-1 text-sm text-error" role="alert">{errors.usagePeriod}</p>}
+            <legend className="mb-2 text-sm font-medium text-content">
+              使用期間 <span className="text-error">*</span>
+            </legend>
+            <PeriodSelector
+              value={form.usagePeriod}
+              onChange={(p: UsagePeriod) => setField("usagePeriod", p)}
+            />
+            {errors.usagePeriod && (
+              <p className="mt-1 text-sm text-error" role="alert">
+                {errors.usagePeriod}
+              </p>
+            )}
           </motion.fieldset>
 
           {/* レビュー本文 */}
           <motion.div custom={5} variants={sectionVariants} initial="hidden" animate="visible">
-            <label htmlFor="body" className="mb-2 block text-sm font-medium text-content">レビュー <span className="text-error">*</span></label>
-            <textarea id="body" rows={6} maxLength={BODY_MAX_LENGTH} className="input w-full resize-none" placeholder="使ってみた感想を教えてください（10文字以上）" value={form.body} onChange={(e) => setField("body", e.target.value)} aria-invalid={!!errors.body} aria-describedby={errors.body ? "body-error" : "body-count"} />
+            <label htmlFor="body" className="mb-2 block text-sm font-medium text-content">
+              レビュー <span className="text-error">*</span>
+            </label>
+            <textarea
+              id="body"
+              rows={6}
+              maxLength={BODY_MAX_LENGTH}
+              className="input w-full resize-none"
+              placeholder="使ってみた感想を教えてください（10文字以上）"
+              value={form.body}
+              onChange={(e) => setField("body", e.target.value)}
+              aria-invalid={!!errors.body}
+              aria-describedby={errors.body ? "body-error" : "body-count"}
+            />
             <div className="mt-1 flex items-center justify-between">
-              {errors.body ? <p id="body-error" className="text-sm text-error" role="alert">{errors.body}</p> : <span />}
-              <span id="body-count" className={`text-xs ${form.body.length > BODY_MAX_LENGTH * 0.9 ? "text-warning" : "text-content-muted"}`}>{form.body.length}/{BODY_MAX_LENGTH}</span>
+              {errors.body ? (
+                <p id="body-error" className="text-sm text-error" role="alert">
+                  {errors.body}
+                </p>
+              ) : (
+                <span />
+              )}
+              <span
+                id="body-count"
+                className={`text-xs ${form.body.length > BODY_MAX_LENGTH * 0.9 ? "text-warning" : "text-content-muted"}`}
+              >
+                {form.body.length}/{BODY_MAX_LENGTH}
+              </span>
             </div>
           </motion.div>
 
@@ -281,7 +403,11 @@ function PostForm() {
           <motion.div custom={6} variants={sectionVariants} initial="hidden" animate="visible">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-content">画像URL</span>
-              <button type="button" onClick={addImageUrl} className="text-xs font-medium text-primary hover:text-primary-hover">
+              <button
+                type="button"
+                onClick={addImageUrl}
+                className="text-xs font-medium text-primary hover:text-primary-hover"
+              >
                 + 追加
               </button>
             </div>
@@ -301,8 +427,22 @@ function PostForm() {
                     value={url}
                     onChange={(e) => updateImageUrl(i, e.target.value)}
                   />
-                  <button type="button" onClick={() => removeImageUrl(i)} className="shrink-0 text-xs text-content-muted hover:text-error" aria-label="画像URLを削除">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <button
+                    type="button"
+                    onClick={() => removeImageUrl(i)}
+                    className="shrink-0 text-xs text-content-muted hover:text-error"
+                    aria-label="画像URLを削除"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      aria-hidden="true"
+                    >
+                      <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
                 </motion.div>
               ))}
@@ -310,50 +450,97 @@ function PostForm() {
             {/* プレビュー */}
             {form.imageUrls.filter((u) => u.trim()).length > 0 && (
               <div className="mt-2 flex gap-2 overflow-x-auto">
-                {form.imageUrls.filter((u) => u.trim()).map((url, i) => (
-                  <img key={i} src={url} alt={`プレビュー ${i + 1}`} className="h-20 w-20 shrink-0 rounded-lg border border-border object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                ))}
+                {form.imageUrls
+                  .filter((u) => u.trim())
+                  .map((url, i) => (
+                    <img
+                      key={i}
+                      src={url}
+                      alt={`プレビュー ${i + 1}`}
+                      className="h-20 w-20 shrink-0 rounded-lg border border-border object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ))}
               </div>
             )}
           </motion.div>
 
           {/* 参考URL */}
           <motion.div custom={7} variants={sectionVariants} initial="hidden" animate="visible">
-            <label htmlFor="referenceUrl" className="mb-2 block text-sm font-medium text-content">参考URL</label>
-            <input id="referenceUrl" type="url" className="input w-full" placeholder="https://example.com/product" value={form.referenceUrl} onChange={(e) => setField("referenceUrl", e.target.value)} aria-invalid={!!errors.referenceUrl} aria-describedby={errors.referenceUrl ? "url-error" : undefined} />
-            {errors.referenceUrl && <p id="url-error" className="mt-1 text-sm text-error" role="alert">{errors.referenceUrl}</p>}
+            <label htmlFor="referenceUrl" className="mb-2 block text-sm font-medium text-content">
+              参考URL
+            </label>
+            <input
+              id="referenceUrl"
+              type="url"
+              className="input w-full"
+              placeholder="https://example.com/product"
+              value={form.referenceUrl}
+              onChange={(e) => setField("referenceUrl", e.target.value)}
+              aria-invalid={!!errors.referenceUrl}
+              aria-describedby={errors.referenceUrl ? "url-error" : undefined}
+            />
+            {errors.referenceUrl && (
+              <p id="url-error" className="mt-1 text-sm text-error" role="alert">
+                {errors.referenceUrl}
+              </p>
+            )}
           </motion.div>
 
           {/* 比較 */}
           <motion.div custom={8} variants={sectionVariants} initial="hidden" animate="visible">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-content">他の商品と比較</span>
-              <button type="button" onClick={addComparison} className="text-xs font-medium text-primary hover:text-primary-hover">
+              <button
+                type="button"
+                onClick={addComparison}
+                className="text-xs font-medium text-primary hover:text-primary-hover"
+              >
                 + 追加
               </button>
             </div>
             <AnimatePresence>
               {form.comparisonItems.map((item, i) => (
                 <div key={i} className="mb-3">
-                  <ComparisonRow item={item} index={i} onChange={updateComparison} onRemove={removeComparison} />
+                  <ComparisonRow
+                    item={item}
+                    index={i}
+                    onChange={updateComparison}
+                    onRemove={removeComparison}
+                  />
                 </div>
               ))}
             </AnimatePresence>
             {form.comparisonItems.length === 0 && (
-              <p className="text-xs text-content-muted">比較したい商品を追加すると、読者にとってより参考になります</p>
+              <p className="text-xs text-content-muted">
+                比較したい商品を追加すると、読者にとってより参考になります
+              </p>
             )}
           </motion.div>
 
           {/* 非公開レビュー（プレミアム限定） */}
           <motion.div custom={9} variants={sectionVariants} initial="hidden" animate="visible">
-            <div className={`rounded-xl border p-4 ${
-              isPremium ? "border-border/50 bg-surface-card" : "border-accent/20 bg-accent/5"
-            }`}>
+            <div
+              className={`rounded-xl border p-4 ${
+                isPremium ? "border-border/50 bg-surface-card" : "border-accent/20 bg-accent/5"
+              }`}
+            >
               <div className="flex items-start gap-3">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                  isPremium ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"
-                }`}>
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    isPremium ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"
+                  }`}
+                >
+                  <svg
+                    className="h-5 w-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    aria-hidden="true"
+                  >
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0110 0v4" />
                   </svg>
@@ -386,7 +573,14 @@ function PostForm() {
                       className="mt-3 inline-flex items-center gap-1 rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-bold text-accent transition-colors hover:bg-accent/25"
                     >
                       プレミアムについて
-                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <svg
+                        className="h-3 w-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        aria-hidden="true"
+                      >
                         <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </Link>

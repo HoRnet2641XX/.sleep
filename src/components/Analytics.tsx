@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { buildAnalyticsPath } from "@/lib/analytics";
 
 /**
  * 軽量プラガブル Analytics 統合。
@@ -22,11 +23,10 @@ export function Analytics() {
   /* SPA ナビゲーション時の page_view 送信 */
   useEffect(() => {
     if (!gaId) return;
-    const win = window as unknown as { gtag?: (...args: unknown[]) => void };
-    if (typeof win.gtag === "function") {
-      const params = searchParams?.toString();
-      const url = pathname + (params ? `?${params}` : "");
-      win.gtag("event", "page_view", { page_path: url });
+    if (typeof window.gtag === "function") {
+      window.gtag("event", "page_view", {
+        page_path: buildAnalyticsPath(pathname, searchParams),
+      });
     }
   }, [pathname, searchParams, gaId]);
 
@@ -36,10 +36,7 @@ export function Analytics() {
     <>
       {gaId && (
         <>
-          <script
-            async
-            src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-          />
+          <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
           <script
             dangerouslySetInnerHTML={{
               __html: `
@@ -53,11 +50,7 @@ export function Analytics() {
         </>
       )}
       {plausibleDomain && (
-        <script
-          defer
-          data-domain={plausibleDomain}
-          src="https://plausible.io/js/script.js"
-        />
+        <script defer data-domain={plausibleDomain} src="https://plausible.io/js/script.js" />
       )}
     </>
   );

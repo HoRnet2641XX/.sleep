@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import { rememberOAuthIntent, trackEvent } from "@/lib/analytics";
 
 interface FormErrors {
   email?: string;
@@ -111,6 +112,7 @@ export default function SignupPage() {
 
     if (emailError || passwordError || confirmError) return;
 
+    trackEvent("signup_click", { method: "email", location: "signup_page" });
     setSubmitting(true);
     const { error } = await signUp(email, password);
 
@@ -125,13 +127,21 @@ export default function SignupPage() {
     }
 
     setSubmitting(false);
+    trackEvent("signup_complete", { method: "email", next: "email_verify" });
     // メール確認画面へリダイレクト
     router.push("/auth/verify");
   };
 
   const handleOAuth = async (provider: "google" | "x") => {
+    trackEvent("oauth_click", { provider, intent: "signup", location: "signup_page" });
+    rememberOAuthIntent(provider, "signup");
+    trackEvent("oauth_start", { provider, intent: "signup" });
     setOauthLoading(provider);
-    await signInWithOAuth(provider);
+    const { error } = await signInWithOAuth(provider);
+    if (error) {
+      setOauthLoading(null);
+      return;
+    }
   };
 
   return (
@@ -161,11 +171,7 @@ export default function SignupPage() {
               onClick={() => handleOAuth("google")}
               disabled={oauthLoading !== null}
             >
-              {oauthLoading === "google" ? (
-                <Spinner />
-              ) : (
-                <GoogleIcon className="h-5 w-5" />
-              )}
+              {oauthLoading === "google" ? <Spinner /> : <GoogleIcon className="h-5 w-5" />}
               Googleで登録
             </button>
 
@@ -175,11 +181,7 @@ export default function SignupPage() {
               onClick={() => handleOAuth("x")}
               disabled={oauthLoading !== null}
             >
-              {oauthLoading === "x" ? (
-                <Spinner />
-              ) : (
-                <XIcon className="h-4 w-4" />
-              )}
+              {oauthLoading === "x" ? <Spinner /> : <XIcon className="h-4 w-4" />}
               Xで登録
             </button>
           </div>

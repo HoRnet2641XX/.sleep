@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { mapReviewRows } from "@/lib/mappers";
+import { mapReviewRowsWithPublicProfiles } from "@/lib/publicProfiles";
 import type { ReviewCategory, ReviewWithUser } from "@/types";
 
 export type SortKey = "new" | "popular" | "following";
@@ -36,7 +36,7 @@ export function useFeed(
       }
       let query = supabase
         .from("reviews")
-        .select("*, profiles(*)")
+        .select("*")
         .in("user_id", ids)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -44,13 +44,13 @@ export function useFeed(
         query = query.eq("category", category);
       }
       const { data } = await query;
-      setReviews(mapReviewRows(data));
+      setReviews(await mapReviewRowsWithPublicProfiles(data));
       clearTimeout(timeout);
       setLoading(false);
       return;
     }
 
-    let query = supabase.from("reviews").select("*, profiles(*)");
+    let query = supabase.from("reviews").select("*");
     if (category !== "all") {
       query = query.eq("category", category);
     }
@@ -61,7 +61,7 @@ export function useFeed(
     }
     query = query.limit(50);
     const { data } = await query;
-    setReviews(mapReviewRows(data));
+    setReviews(await mapReviewRowsWithPublicProfiles(data));
     clearTimeout(timeout);
     setLoading(false);
   }, [category, sortBy, userId]);

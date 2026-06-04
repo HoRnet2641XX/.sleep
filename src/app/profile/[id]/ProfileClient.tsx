@@ -115,7 +115,7 @@ export default function ProfileClient({ userId }: { userId: string }) {
                 />
               </div>
             )}
-            <BodyInfoCard profile={profile} />
+            <BodyInfoCard profile={profile} isOwnProfile={isOwnProfile} />
             <SleepInfoCard profile={profile} />
 
             {/* レビュー一覧 */}

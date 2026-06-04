@@ -24,7 +24,7 @@ import { useCurrentHour } from "@/hooks/useCurrentHour";
 import { useSearch } from "@/hooks/useSearch";
 import { useFeed, type SortKey } from "@/hooks/useFeed";
 import { useInteractions } from "@/hooks/useInteractions";
-import { useHomeInsights } from "@/hooks/useHomeInsights";
+import { useHomeInsights, type ProfileCompletion } from "@/hooks/useHomeInsights";
 import { useMatchNotifications } from "@/hooks/useMatchNotifications";
 import { useSubscription } from "@/hooks/useSubscription";
 
@@ -34,6 +34,64 @@ const TrendIcon = (
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
+
+function ProfileCompletionPrompt({ completion }: { completion: ProfileCompletion | null }) {
+  if (!completion?.isIncomplete) return null;
+
+  return (
+    <section
+      className="mb-4 rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/10 via-surface-card to-primary/10 p-4"
+      aria-label="プロフィール入力の案内"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <path d="M12 5v6l4 2" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="12" cy="12" r="8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-bold text-content">プロフィールがまだ途中です</h2>
+            <span className="rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-bold text-accent">
+              未入力あり
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-content-secondary">
+            年代や睡眠の悩みを入れると、近い体験のレビューを見つけやすくなります。
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5" aria-label="未入力項目">
+            {completion.missingLabels.slice(0, 4).map((label) => (
+              <span
+                key={label}
+                className="rounded-full border border-border/70 bg-surface/50 px-2 py-1 text-[11px] text-content-muted"
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-3">
+        <div
+          className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-elevated"
+          aria-label={`プロフィール入力率 ${completion.progressPercent}%`}
+        >
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+            style={{ width: `${completion.progressPercent}%` }}
+          />
+        </div>
+        <Link
+          href="/profile/edit"
+          className="rounded-lg bg-primary/15 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/25"
+        >
+          入力する
+        </Link>
+      </div>
+    </section>
+  );
+}
 
 export function HomeFeed() {
   const router = useRouter();
@@ -88,7 +146,7 @@ export function HomeFeed() {
   );
 
   // コミュニティデータ
-  const { nickname, avatarUrl, activeUsers, insight } = useHomeInsights(user?.id);
+  const { nickname, avatarUrl, activeUsers, insight, profileCompletion } = useHomeInsights(user?.id);
 
   // マッチング通知
   const { notifications: matchNotifications } = useMatchNotifications(user?.id);
@@ -250,6 +308,7 @@ export function HomeFeed() {
               isPremium={isPremium}
               onAvatarClick={() => setMenuOpen(true)}
             />
+            <ProfileCompletionPrompt completion={profileCompletion} />
             <CommunityPulse count={activeUsers} />
             <JournalWidget
               userId={user.id}

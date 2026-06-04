@@ -1,6 +1,7 @@
 "use client";
 
 import { configuredAffiliateLinks } from "@/lib/affiliate";
+import { trackEvent } from "@/lib/analytics";
 import { useSubscription } from "@/hooks/useSubscription";
 import type { AffiliateProvider } from "@/lib/affiliate";
 import type { ReviewCategory } from "@/types";
@@ -78,6 +79,13 @@ export function AffiliateLinks({
             target="_blank"
             rel="sponsored noopener noreferrer"
             referrerPolicy="strict-origin-when-cross-origin"
+            onClick={() =>
+              trackEvent("affiliate_click", {
+                provider: link.provider,
+                category,
+                location: "review_detail",
+              })
+            }
             className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium ring-1 transition-all duration-200 hover:shadow-md ${PROVIDER_STYLES[link.provider]}`}
           >
             <ProviderIcon provider={link.provider} />

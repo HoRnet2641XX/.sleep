@@ -12,6 +12,7 @@ type Props = {
 
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const SESSION_REFRESH_MARGIN_MS = 60_000;
 
 /** マジックバイトで実ファイル形式を検証（拡張子だけでは詐称可能なため） */
 async function isValidImage(file: File): Promise<boolean> {
@@ -46,6 +47,26 @@ async function isValidImage(file: File): Promise<boolean> {
   return false;
 }
 
+async function ensureUploadSession() {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error) throw error;
+  if (!session) {
+    throw new Error("ログイン状態を確認できませんでした。再ログインしてください");
+  }
+
+  const expiresAtMs = session.expires_at ? session.expires_at * 1000 : 0;
+  if (expiresAtMs && expiresAtMs - Date.now() < SESSION_REFRESH_MARGIN_MS) {
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      throw new Error("ログイン状態の更新に失敗しました。再ログインしてください");
+    }
+  }
+}
+
 export function AvatarUpload({ userId, currentUrl, nickname, onChange }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -71,12 +92,14 @@ export function AvatarUpload({ userId, currentUrl, nickname, onChange }: Props) 
 
       setUploading(true);
       try {
+        await ensureUploadSession();
+
         const ext = file.name.split(".").pop() ?? "jpg";
         const path = `${userId}/avatar-${Date.now()}.${ext}`;
 
         const { error: uploadError } = await supabase.storage
           .from("avatars")
-          .upload(path, file, { upsert: true, cacheControl: "3600" });
+          .upload(path, file, { cacheControl: "3600" });
 
         if (uploadError) throw uploadError;
 

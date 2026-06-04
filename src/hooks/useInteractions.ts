@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { trackEvent } from "@/lib/analytics";
 import type { ReviewWithUser } from "@/types";
 import { PLANS } from "@/types";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -106,10 +107,19 @@ export function useInteractions(
 
       try {
         if (wasLiked) {
-          await supabase.from("likes").delete().eq("review_id", reviewId).eq("user_id", userId);
+          const { error } = await supabase
+            .from("likes")
+            .delete()
+            .eq("review_id", reviewId)
+            .eq("user_id", userId);
+          if (error) throw error;
         } else {
-          await supabase.from("likes").insert({ review_id: reviewId, user_id: userId });
+          const { error } = await supabase
+            .from("likes")
+            .insert({ review_id: reviewId, user_id: userId });
+          if (error) throw error;
         }
+        trackEvent("like_click", { action: wasLiked ? "remove" : "add", location: "feed" });
       } catch {
         setLikedIds((prev) => updateIdMembership(prev, reviewId, wasLiked));
         const revert = withLikeDelta(reviewId, -delta);
@@ -142,12 +152,24 @@ export function useInteractions(
       setSavedIds((prev) => updateIdMembership(prev, reviewId, !wasSaved));
       try {
         if (wasSaved) {
-          await supabase.from("bookmarks").delete().eq("review_id", reviewId).eq("user_id", userId);
+          const { error } = await supabase
+            .from("bookmarks")
+            .delete()
+            .eq("review_id", reviewId)
+            .eq("user_id", userId);
+          if (error) throw error;
           setTotalBookmarks((n) => Math.max(0, n - 1));
         } else {
-          await supabase.from("bookmarks").insert({ review_id: reviewId, user_id: userId });
+          const { error } = await supabase
+            .from("bookmarks")
+            .insert({ review_id: reviewId, user_id: userId });
+          if (error) throw error;
           setTotalBookmarks((n) => n + 1);
         }
+        trackEvent("bookmark_click", {
+          action: wasSaved ? "remove" : "add",
+          location: "feed",
+        });
       } catch {
         setSavedIds((prev) => updateIdMembership(prev, reviewId, wasSaved));
       }

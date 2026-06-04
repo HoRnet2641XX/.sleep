@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 type Props = {
   title: string;
@@ -17,6 +18,7 @@ export function ShareButtons({ title, text, url }: Props) {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
+      trackEvent("share_click", { channel: "copy", location: "review_detail" });
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // fallback
@@ -33,6 +35,7 @@ export function ShareButtons({ title, text, url }: Props) {
         href={xUrl}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => trackEvent("share_click", { channel: "x", location: "review_detail" })}
         className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-elevated text-content-secondary transition-colors hover:bg-surface-elevated/80 hover:text-content"
         aria-label="Xで共有"
       >
@@ -46,6 +49,7 @@ export function ShareButtons({ title, text, url }: Props) {
         href={lineUrl}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => trackEvent("share_click", { channel: "line", location: "review_detail" })}
         className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-elevated text-content-secondary transition-colors hover:bg-[#06C755]/10 hover:text-[#06C755]"
         aria-label="LINEで共有"
       >
@@ -63,16 +67,43 @@ export function ShareButtons({ title, text, url }: Props) {
       >
         {copied ? (
           <>
-            <svg className="h-3.5 w-3.5 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <svg
+              className="h-3.5 w-3.5 text-success"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
               <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             コピー済み
           </>
         ) : (
           <>
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" strokeLinecap="round" strokeLinejoin="round" />
+            <svg
+              className="h-3.5 w-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <rect
+                x="9"
+                y="9"
+                width="13"
+                height="13"
+                rx="2"
+                ry="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             リンク
           </>

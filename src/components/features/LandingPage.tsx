@@ -5,12 +5,10 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, useReducedMotion, useScroll, useTransform, useInView } from "framer-motion";
 import { StarRating } from "@/components/ui/StarRating";
+import { trackEvent } from "@/lib/analytics";
 
 const HeroSleepScene = dynamic(
-  () =>
-    import("@/components/features/HeroSleepScene").then(
-      (m) => m.HeroSleepScene,
-    ),
+  () => import("@/components/features/HeroSleepScene").then((m) => m.HeroSleepScene),
   { ssr: false },
 );
 
@@ -22,16 +20,12 @@ function HeroClock({ animated }: { animated: boolean }) {
     const now = new Date();
     return `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
   });
-  const [seconds, setSeconds] = useState(() =>
-    String(new Date().getSeconds()).padStart(2, "0"),
-  );
+  const [seconds, setSeconds] = useState(() => String(new Date().getSeconds()).padStart(2, "0"));
 
   useEffect(() => {
     const tick = () => {
       const now = new Date();
-      setTime(
-        `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`,
-      );
+      setTime(`${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`);
       setSeconds(String(now.getSeconds()).padStart(2, "0"));
     };
     tick();
@@ -187,10 +181,7 @@ function ReviewTicker() {
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-surface to-transparent" />
       <div className="animate-ticker flex w-max gap-8">
         {items.map((text, i) => (
-          <span
-            key={i}
-            className="shrink-0 whitespace-nowrap text-sm text-content-muted/70"
-          >
+          <span key={i} className="shrink-0 whitespace-nowrap text-sm text-content-muted/70">
             {text}
             <span className="ml-8 text-primary/30">·</span>
           </span>
@@ -224,34 +215,54 @@ function PhoneMockup() {
         </div>
         {/* レビューカード（常にプレースホルダー表示） */}
         <div className="space-y-2 bg-surface p-3 pb-6">
-              <div className="rounded-lg border border-border/50 bg-surface-card p-3">
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[7px] font-bold text-primary">N</span>
-                  <span className="text-[9px] text-content-secondary">nemuriさん</span>
-                  <span className="ml-auto rounded-full bg-primary/10 px-1.5 py-0.5 text-[7px] text-primary">薬</span>
-                </div>
-                <p className="mb-1 text-[10px] font-bold leading-snug text-content">メラトニンサプリ 3mg</p>
-                <div className="mb-1"><StarRating rating={4} size="sm" /></div>
-                <p className="text-[8px] leading-relaxed text-content-muted">寝つきが30分くらい早くなった気がします。副作用もなく...</p>
-              </div>
-              <div className="rounded-lg border border-border/50 bg-surface-card p-3">
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-accent/20 text-[7px] font-bold text-accent">Y</span>
-                  <span className="text-[9px] text-content-secondary">yoru_tomoさん</span>
-                  <span className="ml-auto rounded-full bg-primary/10 px-1.5 py-0.5 text-[7px] text-primary">習慣</span>
-                </div>
-                <p className="mb-1 text-[10px] font-bold leading-snug text-content">寝る前のストレッチ 10分</p>
-                <div className="mb-1"><StarRating rating={5} size="sm" /></div>
-                <p className="text-[8px] leading-relaxed text-content-muted">YouTube見ながら毎晩やってます。肩こりも減って一石二鳥...</p>
-              </div>
+          <div className="rounded-lg border border-border/50 bg-surface-card p-3">
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[7px] font-bold text-primary">
+                N
+              </span>
+              <span className="text-[9px] text-content-secondary">nemuriさん</span>
+              <span className="ml-auto rounded-full bg-primary/10 px-1.5 py-0.5 text-[7px] text-primary">
+                薬
+              </span>
+            </div>
+            <p className="mb-1 text-[10px] font-bold leading-snug text-content">
+              メラトニンサプリ 3mg
+            </p>
+            <div className="mb-1">
+              <StarRating rating={4} size="sm" />
+            </div>
+            <p className="text-[8px] leading-relaxed text-content-muted">
+              寝つきが30分くらい早くなった気がします。副作用もなく...
+            </p>
+          </div>
+          <div className="rounded-lg border border-border/50 bg-surface-card p-3">
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-accent/20 text-[7px] font-bold text-accent">
+                Y
+              </span>
+              <span className="text-[9px] text-content-secondary">yoru_tomoさん</span>
+              <span className="ml-auto rounded-full bg-primary/10 px-1.5 py-0.5 text-[7px] text-primary">
+                習慣
+              </span>
+            </div>
+            <p className="mb-1 text-[10px] font-bold leading-snug text-content">
+              寝る前のストレッチ 10分
+            </p>
+            <div className="mb-1">
+              <StarRating rating={5} size="sm" />
+            </div>
+            <p className="text-[8px] leading-relaxed text-content-muted">
+              YouTube見ながら毎晩やってます。肩こりも減って一石二鳥...
+            </p>
+          </div>
           {/* ゴーストカード */}
           <div className="rounded-lg border border-border/30 bg-surface-card/50 p-3">
             <div className="mb-1.5 flex items-center gap-1.5">
               <span className="h-4 w-4 rounded-full bg-surface-elevated" />
               <span className="h-2 w-12 rounded bg-surface-elevated" />
             </div>
-            <span className="h-2 w-20 rounded bg-surface-elevated block mb-1" />
-            <span className="h-1.5 w-full rounded bg-surface-elevated block" />
+            <span className="mb-1 block h-2 w-20 rounded bg-surface-elevated" />
+            <span className="block h-1.5 w-full rounded bg-surface-elevated" />
           </div>
         </div>
       </div>
@@ -297,9 +308,7 @@ function CommunityHeading({ animated }: { animated: boolean }) {
       <motion.p
         initial={{ opacity: 0, letterSpacing: "0.6em" }}
         animate={
-          isInView
-            ? { opacity: 1, letterSpacing: "0.3em" }
-            : { opacity: 0, letterSpacing: "0.6em" }
+          isInView ? { opacity: 1, letterSpacing: "0.3em" } : { opacity: 0, letterSpacing: "0.6em" }
         }
         transition={{ duration: animated ? 0.8 : 0.01, ease: "easeOut" }}
         className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-accent/70"
@@ -334,11 +343,7 @@ function CommunityHeading({ animated }: { animated: boolean }) {
       {/* 見出し下のほのかな光パルス */}
       <motion.div
         initial={{ opacity: 0, scaleX: 0 }}
-        animate={
-          isInView
-            ? { opacity: 1, scaleX: 1 }
-            : { opacity: 0, scaleX: 0 }
-        }
+        animate={isInView ? { opacity: 1, scaleX: 1 } : { opacity: 0, scaleX: 0 }}
         transition={{
           duration: animated ? 0.8 : 0.01,
           delay: animated ? 1.0 : 0,
@@ -360,8 +365,7 @@ function CommunityHeading({ animated }: { animated: boolean }) {
             ease: "easeInOut",
           }}
           style={{
-            background:
-              "linear-gradient(90deg, transparent, rgba(169,143,216,0.3), transparent)",
+            background: "linear-gradient(90deg, transparent, rgba(169,143,216,0.3), transparent)",
           }}
         />
       )}
@@ -375,17 +379,15 @@ function CommunityHeading({ animated }: { animated: boolean }) {
  * 有機的な動きを生み出す。
  */
 const DRIFT_PARAMS = CONSTELLATION_NODES.map((_, i) => ({
-  ax: 1.2 + (i % 3) * 0.6,       // X振幅
+  ax: 1.2 + (i % 3) * 0.6, // X振幅
   ay: 1.0 + ((i + 1) % 3) * 0.5, // Y振幅
-  px: 4 + i * 1.3,                // X周期(秒)
-  py: 5 + i * 1.1,                // Y周期(秒)
-  phase: i * 1.2,                 // 位相ずらし
+  px: 4 + i * 1.3, // X周期(秒)
+  py: 5 + i * 1.1, // Y周期(秒)
+  phase: i * 1.2, // 位相ずらし
 }));
 
 function useDriftPositions(animated: boolean) {
-  const [positions, setPositions] = useState(
-    CONSTELLATION_NODES.map((n) => ({ x: n.x, y: n.y })),
-  );
+  const [positions, setPositions] = useState(CONSTELLATION_NODES.map((n) => ({ x: n.x, y: n.y })));
 
   useEffect(() => {
     if (!animated) return;
@@ -398,8 +400,8 @@ function useDriftPositions(animated: boolean) {
         CONSTELLATION_NODES.map((node, i) => {
           const d = DRIFT_PARAMS[i];
           return {
-            x: node.x + Math.sin((t + d.phase) / d.px * Math.PI * 2) * d.ax,
-            y: node.y + Math.cos((t + d.phase) / d.py * Math.PI * 2) * d.ay,
+            x: node.x + Math.sin(((t + d.phase) / d.px) * Math.PI * 2) * d.ax,
+            y: node.y + Math.cos(((t + d.phase) / d.py) * Math.PI * 2) * d.ay,
           };
         }),
       );
@@ -488,9 +490,7 @@ function Constellation({ animated }: { animated: boolean }) {
             />
             <span
               className={`absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] ${
-                isYou
-                  ? "top-6 font-bold text-accent"
-                  : "top-5 text-content-muted/60"
+                isYou ? "top-6 font-bold text-accent" : "top-5 text-content-muted/60"
               }`}
             >
               {node.label}
@@ -503,8 +503,17 @@ function Constellation({ animated }: { animated: boolean }) {
 }
 
 function HomeScreenInstallSection({ animated }: { animated: boolean }) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const isInView = useInView(sectionRef, { once: true, margin: "-120px" });
+
+  useEffect(() => {
+    if (isInView) {
+      trackEvent("home_screen_section_view", { location: "landing_page" });
+    }
+  }, [isInView]);
+
   return (
-    <section className="relative z-10 border-t border-border/20 py-24">
+    <section ref={sectionRef} className="relative z-10 border-t border-border/20 py-24">
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -530,9 +539,7 @@ function HomeScreenInstallSection({ animated }: { animated: boolean }) {
           <p className="max-w-sm text-sm leading-[1.9] text-content-secondary">
             SafariやChromeで開いて、
             <br />
-            <span className="font-medium text-content">
-              共有ボタン → ホーム画面に追加。
-            </span>
+            <span className="font-medium text-content">共有ボタン → ホーム画面に追加。</span>
             <br />
             .nemuriを、いつものアプリのように置いておけます。
           </p>
@@ -551,18 +558,21 @@ function HomeScreenInstallSection({ animated }: { animated: boolean }) {
         >
           <div className="mb-5 flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+              <svg
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                aria-hidden="true"
+              >
                 <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
                 <path d="M10.5 18.5h3" strokeLinecap="round" />
               </svg>
             </span>
             <div>
-              <h3 className="text-base font-bold text-content">
-                眠れない夜に、すぐ戻れる
-              </h3>
-              <p className="mt-1 text-xs text-content-muted">
-                ブックマークより近い場所へ
-              </p>
+              <h3 className="text-base font-bold text-content">眠れない夜に、すぐ戻れる</h3>
+              <p className="mt-1 text-xs text-content-muted">ブックマークより近い場所へ</p>
             </div>
           </div>
 
@@ -571,7 +581,11 @@ function HomeScreenInstallSection({ animated }: { animated: boolean }) {
               {
                 label: "共有ボタンを開く",
                 icon: (
-                  <path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M5 11v7a2 2 0 002 2h10a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round" />
+                  <path
+                    d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M5 11v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 ),
               },
               {
@@ -595,7 +609,14 @@ function HomeScreenInstallSection({ animated }: { animated: boolean }) {
                 className="flex items-center gap-3 rounded-lg border border-border/40 bg-surface-elevated/45 px-4 py-3"
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface text-content-muted ring-1 ring-border/40">
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    aria-hidden="true"
+                  >
                     {step.icon}
                   </svg>
                 </span>
@@ -636,19 +657,21 @@ export function LandingPage() {
         <header className="relative z-20 flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2">
             <img src="/mascot.svg" alt=".nemuri" className="h-6 w-6" />
-            <span className="text-sm font-bold tracking-tight text-content/80">
-              .nemuri
-            </span>
+            <span className="text-sm font-bold tracking-tight text-content/80">.nemuri</span>
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/login"
+              onClick={() => trackEvent("login_click", { location: "landing_header" })}
               className="text-xs font-medium text-content-muted hover:text-content"
             >
               ログイン
             </Link>
             <Link
               href="/signup"
+              onClick={() =>
+                trackEvent("signup_click", { location: "landing_header", method: "cta" })
+              }
               className="rounded-full bg-content/10 px-4 py-1.5 text-xs font-medium text-content backdrop-blur-sm transition hover:bg-content/20"
             >
               無料で始める
@@ -685,11 +708,7 @@ export function LandingPage() {
                 ease: "easeInOut",
               }}
             >
-              <path
-                d="M12 5v14M5 12l7 7 7-7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M12 5v14M5 12l7 7 7-7" strokeLinecap="round" strokeLinejoin="round" />
             </motion.svg>
           </motion.div>
         </motion.div>
@@ -786,7 +805,8 @@ export function LandingPage() {
         <div
           className="pointer-events-none absolute right-0 top-0 h-full w-1/2"
           style={{
-            background: "radial-gradient(ellipse at 80% 40%, rgba(169,143,216,0.05) 0%, transparent 60%)",
+            background:
+              "radial-gradient(ellipse at 80% 40%, rgba(169,143,216,0.05) 0%, transparent 60%)",
           }}
         />
         <div className="relative mx-auto grid max-w-page items-start gap-12 px-5 md:grid-cols-5">
@@ -796,7 +816,7 @@ export function LandingPage() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: animated ? 0.7 : 0.01, ease: [0.22, 1, 0.36, 1] }}
-            className="md:col-span-2 md:sticky md:top-32"
+            className="md:sticky md:top-32 md:col-span-2"
           >
             <p className="mb-4 text-xs font-medium uppercase tracking-[0.3em] text-primary/60">
               just started
@@ -826,12 +846,25 @@ export function LandingPage() {
               className="flex gap-5 rounded-2xl border border-border/40 bg-surface-card p-6"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                  <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </div>
               <div>
-                <h3 className="mb-2 text-base font-bold text-content">あなたの体験を待っています</h3>
+                <h3 className="mb-2 text-base font-bold text-content">
+                  あなたの体験を待っています
+                </h3>
                 <p className="text-sm leading-relaxed text-content-secondary/80">
                   薬、枕、生活習慣——何が効いたか、何がダメだったか。どんな小さな体験でも、同じ悩みを持つ誰かのヒントになります。
                 </p>
@@ -842,7 +875,11 @@ export function LandingPage() {
               initial={animated ? { opacity: 0, y: 40 } : { opacity: 1 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: animated ? 0.15 : 0, duration: animated ? 0.6 : 0.01, ease: [0.22, 1, 0.36, 1] }}
+              transition={{
+                delay: animated ? 0.15 : 0,
+                duration: animated ? 0.6 : 0.01,
+                ease: [0.22, 1, 0.36, 1],
+              }}
               className="rounded-2xl border border-accent/10 bg-gradient-to-br from-accent/5 to-transparent p-6"
             >
               <p className="mb-3 text-sm font-medium text-accent">実績はこれから、一緒につくる</p>
@@ -891,9 +928,24 @@ export function LandingPage() {
               className="w-[280px] flex-shrink-0 snap-start rounded-2xl border border-border bg-surface-card p-5"
             >
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                  <path d="M3 13h18v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6zM3 13c0-3 2-5 5-5h8c3 0 5 2 5 5" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M8 8V6a2 2 0 012-2h4a2 2 0 012 2v2" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  className="h-6 w-6"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 13h18v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6zM3 13c0-3 2-5 5-5h8c3 0 5 2 5 5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M8 8V6a2 2 0 012-2h4a2 2 0 012 2v2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </div>
               <h3 className="mb-2 text-base font-bold text-content">寝具・マットレス</h3>
@@ -907,15 +959,26 @@ export function LandingPage() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: animated ? 0.1 : 0, duration: animated ? 0.5 : 0.01 }}
-              className="w-[280px] flex-shrink-0 snap-start self-end rounded-2xl border border-accent/20 bg-gradient-to-b from-accent/8 to-surface-card p-5"
+              className="from-accent/8 w-[280px] flex-shrink-0 snap-start self-end rounded-2xl border border-accent/20 bg-gradient-to-b to-surface-card p-5"
             >
               <h3 className="mb-2 text-base font-bold text-accent">サプリ・ヘルスケア</h3>
               <p className="mb-4 text-sm leading-relaxed text-content-secondary/80">
                 メラトニン、GABA、CBDオイル——睡眠サプリの実体験が集まる場所で、信頼とともに届けます。
               </p>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                  <path d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.3 24.3 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-1.43 4.294a2.25 2.25 0 01-2.13 1.556H8.56a2.25 2.25 0 01-2.13-1.556L5 14.5m14 0H5" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.3 24.3 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-1.43 4.294a2.25 2.25 0 01-2.13 1.556H8.56a2.25 2.25 0 01-2.13-1.556L5 14.5m14 0H5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </div>
             </motion.div>
@@ -950,7 +1013,14 @@ export function LandingPage() {
               className="inline-flex items-center gap-2 rounded-xl border border-border-light bg-surface-elevated/60 px-5 py-2.5 text-sm font-medium text-content transition-all hover:border-primary/30 hover:bg-surface-elevated"
             >
               お問い合わせ
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </Link>
@@ -985,14 +1055,9 @@ export function LandingPage() {
               aria-hidden="true"
               className="absolute inset-0 rounded-full"
               style={{
-                background:
-                  "radial-gradient(circle, rgba(245,184,61,0.25) 0%, transparent 60%)",
+                background: "radial-gradient(circle, rgba(245,184,61,0.25) 0%, transparent 60%)",
               }}
-              animate={
-                animated
-                  ? { scale: [1, 1.4, 1], opacity: [0.4, 0.7, 0.4] }
-                  : undefined
-              }
+              animate={animated ? { scale: [1, 1.4, 1], opacity: [0.4, 0.7, 0.4] } : undefined}
               transition={{
                 duration: 4,
                 repeat: Infinity,
@@ -1028,6 +1093,9 @@ export function LandingPage() {
           <div className="flex flex-col items-center gap-4">
             <Link
               href="/signup"
+              onClick={() =>
+                trackEvent("signup_click", { location: "landing_final_cta", method: "cta" })
+              }
               className="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary to-accent/80 px-12 py-5 text-lg font-bold text-white shadow-[0_8px_32px_rgba(169,143,216,0.3)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_16px_48px_rgba(169,143,216,0.45)]"
             >
               {/* 呼吸グロー */}
@@ -1069,7 +1137,12 @@ export function LandingPage() {
               <div className="flex items-center gap-2">
                 {/* Google */}
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-elevated/60 ring-1 ring-border/30">
-                  <svg className="h-3.5 w-3.5 text-content-muted" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <svg
+                    className="h-3.5 w-3.5 text-content-muted"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
@@ -1078,13 +1151,25 @@ export function LandingPage() {
                 </span>
                 {/* X */}
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-elevated/60 ring-1 ring-border/30">
-                  <svg className="h-3 w-3 text-content-muted" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <svg
+                    className="h-3 w-3 text-content-muted"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                   </svg>
                 </span>
                 {/* Mail */}
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-elevated/60 ring-1 ring-border/30">
-                  <svg className="h-3.5 w-3.5 text-content-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <svg
+                    className="h-3.5 w-3.5 text-content-muted"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden="true"
+                  >
                     <rect x="2" y="4" width="20" height="16" rx="2" />
                     <path d="M22 7l-10 7L2 7" />
                   </svg>
@@ -1093,9 +1178,7 @@ export function LandingPage() {
               <span className="h-px w-8 bg-border/40" />
             </div>
 
-            <p className="text-xs text-content-muted/80">
-              30秒で完了 · クレジットカード不要
-            </p>
+            <p className="text-xs text-content-muted/80">30秒で完了 · クレジットカード不要</p>
           </div>
         </motion.div>
       </section>
@@ -1103,10 +1186,18 @@ export function LandingPage() {
       {/* フッター */}
       <footer className="relative z-10 border-t border-border/20 py-6">
         <nav className="mb-4 flex flex-wrap items-center justify-center gap-4 text-xs text-content-muted">
-          <Link href="/legal/terms" className="hover:text-content">利用規約</Link>
-          <Link href="/legal/privacy" className="hover:text-content">プライバシーポリシー</Link>
-          <Link href="/legal/disclaimer" className="hover:text-content">医療免責事項</Link>
-          <Link href="/contact" className="hover:text-content">お問い合わせ</Link>
+          <Link href="/legal/terms" className="hover:text-content">
+            利用規約
+          </Link>
+          <Link href="/legal/privacy" className="hover:text-content">
+            プライバシーポリシー
+          </Link>
+          <Link href="/legal/disclaimer" className="hover:text-content">
+            医療免責事項
+          </Link>
+          <Link href="/contact" className="hover:text-content">
+            お問い合わせ
+          </Link>
         </nav>
         <p className="text-center text-xs text-content-muted">&copy; 2026 .nemuri</p>
       </footer>

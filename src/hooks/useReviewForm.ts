@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import type {
   ReviewFormData,
@@ -125,6 +126,15 @@ export function useReviewForm() {
       });
 
       if (error) throw error;
+
+      trackEvent("review_submit", {
+        category: form.category,
+        rating: form.rating,
+        is_private: form.isPrivate,
+        has_reference: !!form.referenceUrl.trim(),
+        image_count: validImageUrls.length,
+        comparison_count: validComparisons.length,
+      });
 
       setForm(INITIAL_FORM);
       setErrors({});

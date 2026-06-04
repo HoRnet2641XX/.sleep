@@ -29,18 +29,21 @@ function getJoinedProfile(row: SupabaseRow): SupabaseRow {
 
 /** Supabase の profiles 行をフロントの UserProfile 型へ変換 */
 export function mapProfileRow(row: SupabaseRow): UserProfile {
+  const id = (row.id ?? row.user_id) as string;
+
   return {
-    id: row.id as string,
+    id,
     nickname: row.nickname as string,
     avatarUrl: (row.avatar_url as string | null) ?? null,
     height: (row.height as number | null) ?? null,
     weight: (row.weight as number | null) ?? null,
+    weightIsPublic: (row.weight_is_public as boolean | null) ?? true,
     gender: (row.gender as Gender | null) ?? null,
     ageGroup: (row.age_group as string | null) ?? null,
     sleepDisorderTypes: (row.sleep_disorder_types as SleepDisorderType[] | null) ?? [],
     cause: (row.cause as string | null) ?? null,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
+    createdAt: (row.created_at as string | null) ?? "",
+    updatedAt: (row.updated_at as string | null) ?? "",
   };
 }
 

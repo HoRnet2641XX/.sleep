@@ -6,13 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
+import { trackEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase";
 import { PLANS } from "@/types";
 import type { PlanType } from "@/types";
-import {
-  PaymentStatusModal,
-  type PaymentStatus,
-} from "@/components/features/PaymentStatusModal";
+import { PaymentStatusModal, type PaymentStatus } from "@/components/features/PaymentStatusModal";
 
 const PLAN_KEYS: PlanType[] = ["free", "premium"];
 
@@ -61,10 +59,21 @@ function PremiumContent() {
       setPaymentStatus("verifying");
 
       try {
+        const sessionId = searchParams?.get("session_id");
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token || !sessionId) {
+          throw new Error("決済確認に必要なログイン情報が見つかりません");
+        }
+
         const res = await fetch("/api/stripe/verify", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: user.id }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ sessionId }),
         });
         const data = (await res.json()) as {
           verified?: boolean;
@@ -78,8 +87,15 @@ function PremiumContent() {
         if (!data.verified) {
           /* reason ごとに分かりやすい文言を出し分ける */
           let msg = data.details ?? "決済の確認に失敗しました。";
-          if (data.reason === "no_paid_session") {
-            msg = "決済が確認できませんでした。決済が完了している場合は数分後に再度お試しください。";
+          if (
+            data.reason === "no_paid_session" ||
+            data.reason === "session_not_found" ||
+            data.reason === "session_not_paid_or_owner_mismatch"
+          ) {
+            msg =
+              "決済が確認できませんでした。決済が完了している場合は数分後に再度お試しください。";
+          } else if (data.reason === "unexpected_price") {
+            msg = "決済プランの確認に失敗しました。時間をおいて再度お試しください。";
           } else if (data.reason === "profile_not_found") {
             msg = "プロフィール情報が見つかりません。再ログインしてもう一度お試しください。";
           } else if (data.reason === "profile_update_no_effect") {
@@ -112,9 +128,7 @@ function PremiumContent() {
         setPaymentStatus("error");
       } catch (e) {
         if (cancelled) return;
-        setPaymentError(
-          e instanceof Error ? e.message : "通信エラーが発生しました",
-        );
+        setPaymentError(e instanceof Error ? e.message : "通信エラーが発生しました");
         setPaymentStatus("error");
       }
     })();
@@ -142,12 +156,27 @@ function PremiumContent() {
       return;
     }
 
+    trackEvent("premium_checkout_start", {
+      plan: "premium",
+      price: PLANS.premium.price,
+      location: "premium_page",
+    });
     setProcessing(true);
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("ログイン情報を確認できませんでした。再ログインしてください。");
+      }
+
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, email: user.email ?? "" }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({}),
       });
       const data = (await res.json()) as {
         url?: string;
@@ -183,21 +212,8 @@ function PremiumContent() {
   const [devError, setDevError] = useState<string | null>(null);
   const handleDevToggle = async () => {
     if (!user) return;
-    setDevToggling(true);
-    setDevError(null);
-    const next = !isPremium;
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({ is_premium: next, updated_at: new Date().toISOString() })
-      .eq("id", user.id);
-
-    if (error) {
-      setDevError(`${error.code ?? ""} ${error.message}`);
-      setDevToggling(false);
-      return;
-    }
-    window.location.reload();
+    setDevToggling(false);
+    setDevError("プレミアム状態はDBで保護されています。確認はStripe経由で行ってください。");
   };
 
   return (
@@ -210,7 +226,14 @@ function PremiumContent() {
             className="flex items-center text-content-secondary hover:text-content"
             aria-label="ホームに戻る"
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
               <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </Link>
@@ -226,7 +249,10 @@ function PremiumContent() {
               <div>
                 <p className="text-xs font-bold text-warning">[DEV] プレミアム切替</p>
                 <p className="text-xs text-content-muted">
-                  現在: <span className="font-medium text-content">{isPremium ? "プレミアム" : "フリー"}</span>
+                  現在:{" "}
+                  <span className="font-medium text-content">
+                    {isPremium ? "プレミアム" : "フリー"}
+                  </span>
                 </p>
               </div>
               <button
@@ -239,9 +265,7 @@ function PremiumContent() {
               </button>
             </div>
             {devError && (
-              <p className="mt-2 rounded bg-error/10 px-2 py-1.5 text-xs text-error">
-                {devError}
-              </p>
+              <p className="mt-2 rounded bg-error/10 px-2 py-1.5 text-xs text-error">{devError}</p>
             )}
           </div>
         )}
@@ -265,7 +289,14 @@ function PremiumContent() {
             animate={reduced ? undefined : { scale: [1, 1.05, 1] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           >
-            <svg className="h-8 w-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <svg
+              className="h-8 w-8 text-primary"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
               <path d="M2 17l10 5 10-5" />
               <path d="M2 12l10 5 10-5" />
@@ -274,9 +305,7 @@ function PremiumContent() {
           <h2 className="mb-2 text-2xl font-bold text-content md:text-3xl">
             あなたの眠りに、もっと寄り添う
           </h2>
-          <p className="text-sm text-content-secondary">
-            プレミアムで自分に合った情報をもっと深く
-          </p>
+          <p className="text-sm text-content-secondary">プレミアムで自分に合った情報をもっと深く</p>
         </motion.div>
 
         {/* プランカード */}
@@ -414,9 +443,7 @@ function PremiumContent() {
                     <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </summary>
-                <p className="px-4 pb-4 text-xs leading-relaxed text-content-secondary">
-                  {faq.a}
-                </p>
+                <p className="px-4 pb-4 text-xs leading-relaxed text-content-secondary">{faq.a}</p>
               </details>
             ))}
           </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { consumeOAuthIntent, trackEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -38,6 +39,8 @@ export default function AuthCallbackPage() {
         return;
       }
 
+      const oauthIntent = consumeOAuthIntent();
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -61,11 +64,19 @@ export default function AuthCallbackPage() {
             nickname,
             avatar_url: user.user_metadata?.avatar_url ?? null,
           });
+          trackEvent("signup_complete", {
+            method: oauthIntent?.provider ?? "oauth",
+            next: "profile_setup",
+          });
           router.replace("/profile/setup");
           return;
         }
       }
 
+      trackEvent("login_complete", {
+        method: oauthIntent?.provider ?? "oauth",
+        next: "home",
+      });
       router.replace("/");
     })();
   }, [router]);

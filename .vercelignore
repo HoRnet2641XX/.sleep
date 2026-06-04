@@ -1,0 +1,14 @@
+.next
+node_modules
+out
+ios
+android
+coverage
+.DS_Store
+*.tsbuildinfo
+.env
+.env.*
+.env*.local
+!.env.example
+!.env.*.example
+supabase/.temp

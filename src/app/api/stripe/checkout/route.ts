@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 /**
@@ -14,6 +15,8 @@ export async function POST(req: NextRequest) {
   const priceId =
     process.env.STRIPE_PRICE_ID_PREMIUM ??
     process.env.STRIPE_PRICE_ID_PREMIUM_MONTHLY; // 後方互換
+  const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supaAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin;
 
@@ -21,6 +24,8 @@ export async function POST(req: NextRequest) {
   const missing: string[] = [];
   if (!secret) missing.push("STRIPE_SECRET_KEY");
   if (!priceId) missing.push("STRIPE_PRICE_ID_PREMIUM");
+  if (!supaUrl) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!supaAnonKey) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   if (missing.length > 0) {
     return NextResponse.json(
       {
@@ -31,15 +36,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { userId, email } = (await req.json()) as {
-    userId?: string;
-    email?: string;
-  };
-  if (!userId || !email) {
-    return NextResponse.json(
-      { error: "userId and email required" },
-      { status: 400 },
-    );
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) {
+    return NextResponse.json({ error: "authentication required" }, { status: 401 });
+  }
+
+  const authClient = createClient(supaUrl as string, supaAnonKey as string, {
+    auth: { persistSession: false },
+  });
+  const {
+    data: { user },
+    error: authError,
+  } = await authClient.auth.getUser(token);
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "invalid session" }, { status: 401 });
   }
 
   const stripe = new Stripe(secret as string, { apiVersion: "2026-04-22.dahlia" });
@@ -49,9 +60,9 @@ export async function POST(req: NextRequest) {
       mode: "payment", // 買い切り
       payment_method_types: ["card"],
       line_items: [{ price: priceId as string, quantity: 1 }],
-      customer_email: email,
-      client_reference_id: userId,
-      metadata: { user_id: userId },
+      ...(user.email ? { customer_email: user.email } : {}),
+      client_reference_id: user.id,
+      metadata: { user_id: user.id },
       success_url: `${siteUrl}/premium?status=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/premium?status=canceled`,
       locale: "ja",

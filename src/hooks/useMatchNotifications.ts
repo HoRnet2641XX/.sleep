@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { mapReviewRow } from "@/lib/mappers";
+import { mapReviewRowsWithPublicProfiles } from "@/lib/publicProfiles";
 import type { ReviewWithUser, SleepDisorderType } from "@/types";
 import { SLEEP_DISORDER_LABELS } from "@/types";
 
@@ -50,7 +50,7 @@ export function useMatchNotifications(userId: string | undefined) {
         const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
         const { data: reviews } = await supabase
           .from("reviews")
-          .select("*, profiles(*)")
+          .select("*")
           .gte("created_at", since)
           .neq("user_id", userId)
           .order("created_at", { ascending: false })
@@ -62,8 +62,8 @@ export function useMatchNotifications(userId: string | undefined) {
         }
 
         // 3. 投稿者の症状タイプと自分の症状タイプの交差をチェック
-        const matched = reviews.flatMap((row): MatchNotification[] => {
-          const reviewData = mapReviewRow(row as Record<string, unknown>);
+        const reviewDataList = await mapReviewRowsWithPublicProfiles(reviews);
+        const matched = reviewDataList.flatMap((reviewData): MatchNotification[] => {
           const authorTypes = reviewData.user.sleepDisorderTypes;
           const overlap = myTypes.filter((type) => authorTypes.includes(type));
 

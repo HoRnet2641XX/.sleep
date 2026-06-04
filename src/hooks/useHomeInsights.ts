@@ -6,6 +6,51 @@ import { CATEGORY_LABELS } from "@/types";
 import type { ReviewCategory } from "@/types";
 import type { InsightData } from "@/components/features/SleepInsightCard";
 
+export type ProfileCompletion = {
+  isIncomplete: boolean;
+  missingLabels: string[];
+  completedCount: number;
+  totalCount: number;
+  progressPercent: number;
+};
+
+type ProfileCompletionRow = {
+  age_group?: string | null;
+  gender?: string | null;
+  height?: number | null;
+  weight?: number | null;
+  weight_is_public?: boolean | null;
+  sleep_disorder_types?: string[] | null;
+};
+
+function getProfileCompletion(profile: ProfileCompletionRow | null): ProfileCompletion {
+  const sleepTypes = profile?.sleep_disorder_types ?? [];
+  const weightIsPublic = profile?.weight_is_public ?? true;
+
+  const coreItems = [
+    { label: "年代", complete: !!profile?.age_group },
+    { label: "性別", complete: !!profile?.gender },
+    { label: "睡眠の悩み", complete: sleepTypes.length > 0 },
+  ];
+  const supportingItems = [
+    { label: "身長", complete: !!profile?.height },
+    { label: "体重", complete: !weightIsPublic || !!profile?.weight },
+  ];
+
+  const allItems = [...coreItems, ...supportingItems];
+  const missingLabels = allItems.filter((item) => !item.complete).map((item) => item.label);
+  const completedCount = allItems.length - missingLabels.length;
+  const coreMissingCount = coreItems.filter((item) => !item.complete).length;
+
+  return {
+    isIncomplete: coreMissingCount >= 2,
+    missingLabels,
+    completedCount,
+    totalCount: allItems.length,
+    progressPercent: Math.round((completedCount / allItems.length) * 100),
+  };
+}
+
 /**
  * ホーム画面用のコミュニティデータ取得:
  * - ニックネーム
@@ -17,19 +62,21 @@ export function useHomeInsights(userId: string | undefined) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
   const [insight, setInsight] = useState<InsightData | null>(null);
+  const [profileCompletion, setProfileCompletion] = useState<ProfileCompletion | null>(null);
 
   useEffect(() => {
     if (!userId) return;
 
-    // ニックネーム・アバター取得
+    // ニックネーム・アバター・プロフィール入力状況取得
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("nickname, avatar_url")
+        .select("*")
         .eq("id", userId)
         .maybeSingle();
       if (data?.nickname) setNickname(data.nickname as string);
       if (data?.avatar_url !== undefined) setAvatarUrl((data?.avatar_url as string) ?? null);
+      setProfileCompletion(getProfileCompletion((data as ProfileCompletionRow | null) ?? null));
     })();
 
     // 24h 以内のアクティブユーザー数
@@ -82,5 +129,5 @@ export function useHomeInsights(userId: string | undefined) {
     })();
   }, [userId]);
 
-  return { nickname, avatarUrl, activeUsers, insight };
+  return { nickname, avatarUrl, activeUsers, insight, profileCompletion };
 }

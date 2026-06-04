@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { mapReviewRow } from "@/lib/mappers";
+import { trackEvent } from "@/lib/analytics";
+import { mapReviewRowWithPublicProfile } from "@/lib/publicProfiles";
 import { useAuth } from "@/hooks/useAuth";
 import type { ReviewWithUser } from "@/types";
 
@@ -24,14 +25,14 @@ export function useReview(reviewId: string) {
       // レビュー + プロフィールを結合取得
       const { data, error: fetchError } = await supabase
         .from("reviews")
-        .select("*, profiles(*)")
+        .select("*")
         .eq("id", reviewId)
         .single();
 
       if (fetchError) throw fetchError;
       if (!data) throw new Error("レビューが見つかりません");
 
-      setReview(mapReviewRow(data as Record<string, unknown>));
+      setReview(await mapReviewRowWithPublicProfile(data as Record<string, unknown>));
 
       // ログイン中ならいいね/ブックマーク状態を取得
       if (authUser) {
@@ -77,10 +78,22 @@ export function useReview(reviewId: string) {
 
     try {
       if (wasLiked) {
-        await supabase.from("likes").delete().eq("review_id", review.id).eq("user_id", authUser.id);
+        const { error } = await supabase
+          .from("likes")
+          .delete()
+          .eq("review_id", review.id)
+          .eq("user_id", authUser.id);
+        if (error) throw error;
       } else {
-        await supabase.from("likes").insert({ review_id: review.id, user_id: authUser.id });
+        const { error } = await supabase
+          .from("likes")
+          .insert({ review_id: review.id, user_id: authUser.id });
+        if (error) throw error;
       }
+      trackEvent("like_click", {
+        action: wasLiked ? "remove" : "add",
+        location: "review_detail",
+      });
     } catch {
       // ロールバック
       setLiked(wasLiked);
@@ -99,14 +112,22 @@ export function useReview(reviewId: string) {
 
     try {
       if (wasBookmarked) {
-        await supabase
+        const { error } = await supabase
           .from("bookmarks")
           .delete()
           .eq("review_id", review.id)
           .eq("user_id", authUser.id);
+        if (error) throw error;
       } else {
-        await supabase.from("bookmarks").insert({ review_id: review.id, user_id: authUser.id });
+        const { error } = await supabase
+          .from("bookmarks")
+          .insert({ review_id: review.id, user_id: authUser.id });
+        if (error) throw error;
       }
+      trackEvent("bookmark_click", {
+        action: wasBookmarked ? "remove" : "add",
+        location: "review_detail",
+      });
     } catch {
       setBookmarked(wasBookmarked);
     }

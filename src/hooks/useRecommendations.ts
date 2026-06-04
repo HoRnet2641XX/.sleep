@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { mapReviewRows } from "@/lib/mappers";
+import { mapReviewRowsWithPublicProfiles } from "@/lib/publicProfiles";
 import type { ReviewWithUser } from "@/types";
 
 export function useRecommendations() {
@@ -54,7 +54,7 @@ export function useRecommendations() {
         // レビュー詳細取得
         const { data: reviewData } = await supabase
           .from("reviews")
-          .select("*, profiles(*)")
+          .select("*")
           .in("id", reviewIds);
 
         if (!reviewData) {
@@ -63,7 +63,7 @@ export function useRecommendations() {
         }
 
         // RPC のスコア順を維持
-        const mapped = mapReviewRows(reviewData);
+        const mapped = await mapReviewRowsWithPublicProfiles(reviewData);
         const ordered = reviewIds
           .map((id: string) => mapped.find((review) => review.id === id))
           .filter(Boolean) as ReviewWithUser[];

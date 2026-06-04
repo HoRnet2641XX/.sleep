@@ -13,6 +13,7 @@ export type UserProfile = {
   avatarUrl: string | null;
   height: number | null; // cm
   weight: number | null; // kg
+  weightIsPublic: boolean;
   gender: Gender | null;
   ageGroup: string | null; // "20代", "30代" 等
   sleepDisorderTypes: SleepDisorderType[];

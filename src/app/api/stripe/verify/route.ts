@@ -10,11 +10,16 @@ import Stripe from "stripe";
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_SECRET_KEY;
   const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supaAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const supaServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const expectedPriceId =
+    process.env.STRIPE_PRICE_ID_PREMIUM ??
+    process.env.STRIPE_PRICE_ID_PREMIUM_MONTHLY;
 
   const missing: string[] = [];
   if (!secret) missing.push("STRIPE_SECRET_KEY");
   if (!supaUrl) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!supaAnonKey) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   if (!supaServiceKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
   if (missing.length > 0) {
     return NextResponse.json(
@@ -23,26 +28,61 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { userId } = (await req.json()) as { userId?: string };
-  if (!userId) {
-    return NextResponse.json({ error: "userId required" }, { status: 400 });
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) {
+    return NextResponse.json({ error: "authentication required" }, { status: 401 });
+  }
+
+  const authClient = createClient(supaUrl as string, supaAnonKey as string, {
+    auth: { persistSession: false },
+  });
+  const {
+    data: { user },
+    error: authError,
+  } = await authClient.auth.getUser(token);
+  if (authError || !user) {
+    return NextResponse.json({ error: "invalid session" }, { status: 401 });
+  }
+
+  const { sessionId } = (await req.json()) as { sessionId?: string };
+  if (!sessionId) {
+    return NextResponse.json({ error: "sessionId required" }, { status: 400 });
   }
 
   const stripe = new Stripe(secret as string, {
     apiVersion: "2026-04-22.dahlia",
   });
 
-  /* このユーザーの直近のチェックアウトセッションを検索 */
-  const sessions = await stripe.checkout.sessions.list({ limit: 30 });
-  const matched = sessions.data.find(
-    (s) => s.client_reference_id === userId && s.payment_status === "paid",
-  );
-
-  if (!matched) {
+  let matched: Stripe.Checkout.Session;
+  try {
+    matched = await stripe.checkout.sessions.retrieve(sessionId);
+  } catch {
     return NextResponse.json({
       verified: false,
-      reason: "no_paid_session",
+      reason: "session_not_found",
     });
+  }
+
+  if (
+    matched.client_reference_id !== user.id ||
+    matched.payment_status !== "paid" ||
+    matched.mode !== "payment"
+  ) {
+    return NextResponse.json({
+      verified: false,
+      reason: "session_not_paid_or_owner_mismatch",
+    });
+  }
+
+  if (expectedPriceId) {
+    const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, { limit: 10 });
+    const hasExpectedPrice = lineItems.data.some((item) => item.price?.id === expectedPriceId);
+    if (!hasExpectedPrice) {
+      return NextResponse.json({
+        verified: false,
+        reason: "unexpected_price",
+      });
+    }
   }
 
   const supabase = createClient(supaUrl as string, supaServiceKey as string, {
@@ -53,7 +93,7 @@ export async function POST(req: NextRequest) {
   const { data: existing, error: selectError } = await supabase
     .from("profiles")
     .select("id, is_premium")
-    .eq("id", userId)
+    .eq("id", user.id)
     .maybeSingle();
 
   if (selectError) {
@@ -71,7 +111,7 @@ export async function POST(req: NextRequest) {
       {
         verified: false,
         reason: "profile_not_found",
-        details: `No profile row for user_id=${userId}`,
+        details: "No profile row for authenticated user",
       },
       { status: 404 },
     );
@@ -81,7 +121,7 @@ export async function POST(req: NextRequest) {
   const { data: updated, error: profileError } = await supabase
     .from("profiles")
     .update({ is_premium: true, updated_at: new Date().toISOString() })
-    .eq("id", userId)
+    .eq("id", user.id)
     .select("id, is_premium")
     .maybeSingle();
 
@@ -116,11 +156,11 @@ export async function POST(req: NextRequest) {
   await supabase
     .from("subscriptions")
     .update({ status: "canceled" })
-    .eq("user_id", userId)
+    .eq("user_id", user.id)
     .in("status", ["active", "past_due"]);
 
   const { error: subError } = await supabase.from("subscriptions").insert({
-    user_id: userId,
+    user_id: user.id,
     plan: "premium",
     status: "active",
     current_period_start: new Date().toISOString(),

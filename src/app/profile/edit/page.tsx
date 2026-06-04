@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/features/AuthGuard";
 import { ProfileForm, type ProfileFormData, EMPTY_FORM } from "@/components/features/ProfileForm";
@@ -35,8 +36,8 @@ function DangerZone() {
       <h2 className="mb-2 text-sm font-bold text-error">アカウントを削除</h2>
       <p className="mb-3 text-xs leading-relaxed text-content-secondary">
         アカウントとすべてのレビュー・ジャーナル・フォロー関係が削除されます。
-        他のユーザーが投稿したコメントへの返信は匿名化されて残ることがあります。
-        この操作は<strong>取り消せません</strong>。
+        他のユーザーが投稿したコメントへの返信は匿名化されて残ることがあります。 この操作は
+        <strong>取り消せません</strong>。
       </p>
 
       {!confirming ? (
@@ -61,9 +62,7 @@ function DangerZone() {
             placeholder="削除します"
             autoComplete="off"
           />
-          {error && (
-            <p className="rounded bg-error/10 px-2 py-1.5 text-xs text-error">{error}</p>
-          )}
+          {error && <p className="rounded bg-error/10 px-2 py-1.5 text-xs text-error">{error}</p>}
           <div className="flex gap-2">
             <button
               type="button"
@@ -118,6 +117,7 @@ function EditForm() {
             avatarUrl: (data.avatar_url as string | null) ?? null,
             height: data.height ? String(data.height) : "",
             weight: data.weight ? String(data.weight) : "",
+            weightIsPublic: (data.weight_is_public as boolean | null) ?? true,
             gender: (data.gender as Gender) ?? null,
             ageGroup: (data.age_group as string) ?? null,
             sleepDisorderTypes: (data.sleep_disorder_types as SleepDisorderType[]) ?? [],
@@ -142,6 +142,7 @@ function EditForm() {
             avatar_url: data.avatarUrl,
             height: data.height ? Number(data.height) : null,
             weight: data.weight ? Number(data.weight) : null,
+            weight_is_public: data.weightIsPublic,
             gender: data.gender,
             age_group: data.ageGroup,
             sleep_disorder_types: data.sleepDisorderTypes,
@@ -207,7 +208,24 @@ function EditForm() {
             </svg>
           </button>
           <h1 className="text-xl font-bold text-content">プロフィール編集</h1>
-          <div className="w-5" aria-hidden="true" />
+          <Link
+            href="/"
+            className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-elevated hover:text-content"
+            aria-label="ホームへ戻る"
+          >
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
+              <path d="M3 11.5L12 4l9 7.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M5.5 10.5V20h13v-9.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M9.5 20v-5h5v5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
         </div>
 
         {/* エラー */}
@@ -225,6 +243,7 @@ function EditForm() {
             onSubmit={handleSubmit}
             submitLabel="保存する"
             submitting={submitting}
+            homeLinkLabel="ホームへ戻る"
           />
         )}
 

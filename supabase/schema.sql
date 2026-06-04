@@ -10,6 +10,7 @@ create table public.profiles (
   avatar_url text,
   height integer,           -- cm
   weight integer,           -- kg
+  weight_is_public boolean default true not null,
   gender text check (gender in ('male', 'female', 'other', 'prefer_not_to_say')),
   age_group text,           -- '20代', '30代' 等
   sleep_disorder_types text[] default '{}',  -- {'insomnia', 'middle_awakening', 'early_awakening', 'other'}

@@ -11,6 +11,7 @@ export interface ProfileUpdateData {
   nickname: string;
   height: number | null;
   weight: number | null;
+  weightIsPublic: boolean;
   gender: Gender | null;
   ageGroup: string | null;
   sleepDisorderTypes: SleepDisorderType[];
@@ -19,7 +20,7 @@ export interface ProfileUpdateData {
 
 /** プロフィール取得・管理フック */
 export function useProfile(userId: string) {
-  const { user: authUser } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [totalLikes, setTotalLikes] = useState(0);
@@ -30,13 +31,17 @@ export function useProfile(userId: string) {
 
   /** プロフィール + レビュー一覧取得 */
   const fetchProfile = useCallback(async () => {
+    if (authLoading) return;
+
     setLoading(true);
     setError(null);
 
     try {
       // プロフィールとレビューを並行取得
       const [profileRes, reviewsRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", userId).single(),
+        isOwnProfile
+          ? supabase.from("profiles").select("*").eq("id", userId).single()
+          : supabase.from("public_profiles").select("*").eq("user_id", userId).single(),
         supabase
           .from("reviews")
           .select("*")
@@ -47,7 +52,10 @@ export function useProfile(userId: string) {
       if (profileRes.error) throw profileRes.error;
       if (!profileRes.data) throw new Error("プロフィールが見つかりません");
 
-      const mappedProfile = mapProfileRow(profileRes.data);
+      const profileRow = isOwnProfile
+        ? profileRes.data
+        : { ...(profileRes.data as Record<string, unknown>), id: userId };
+      const mappedProfile = mapProfileRow(profileRow as Record<string, unknown>);
       const mappedReviews = (reviewsRes.data ?? []).map((r) =>
         mapReviewBaseRow(r as Record<string, unknown>),
       );
@@ -63,7 +71,7 @@ export function useProfile(userId: string) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [authLoading, isOwnProfile, userId]);
 
   useEffect(() => {
     fetchProfile();
@@ -81,6 +89,7 @@ export function useProfile(userId: string) {
             nickname: data.nickname,
             height: data.height,
             weight: data.weight,
+            weight_is_public: data.weightIsPublic,
             gender: data.gender,
             age_group: data.ageGroup,
             sleep_disorder_types: data.sleepDisorderTypes,

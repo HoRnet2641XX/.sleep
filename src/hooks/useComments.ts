@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { mapCommentRow } from "@/lib/mappers";
+import { mapCommentRowsWithPublicProfiles } from "@/lib/publicProfiles";
 import { useAuth } from "@/hooks/useAuth";
 import type { CommentWithUser } from "@/types";
 
@@ -22,13 +22,13 @@ export function useComments(reviewId: string) {
     try {
       const { data, error: fetchError } = await supabase
         .from("comments")
-        .select("*, profiles(*)")
+        .select("*")
         .eq("review_id", reviewId)
         .order("created_at", { ascending: true });
 
       if (fetchError) throw fetchError;
 
-      const mapped = (data ?? []).map((row) => mapCommentRow(row as Record<string, unknown>));
+      const mapped = await mapCommentRowsWithPublicProfiles(data);
 
       setComments(mapped);
     } catch (err) {

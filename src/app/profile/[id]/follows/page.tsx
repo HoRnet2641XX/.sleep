@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { fetchPublicProfileMap } from "@/lib/publicProfiles";
 import { Avatar } from "@/components/ui/Avatar";
 
 type ProfileBrief = {
@@ -35,33 +36,31 @@ export default function FollowsPage() {
       const [followersRes, followingRes] = await Promise.all([
         supabase
           .from("follows")
-          .select("follower_id, profiles!follows_follower_id_fkey(id, nickname, avatar_url)")
+          .select("follower_id")
           .eq("following_id", userId),
         supabase
           .from("follows")
-          .select("following_id, profiles!follows_following_id_fkey(id, nickname, avatar_url)")
+          .select("following_id")
           .eq("follower_id", userId),
       ]);
       if (cancelled) return;
 
-      const mapBrief = (p: unknown): ProfileBrief | null => {
-        if (!p || typeof p !== "object") return null;
-        const r = p as Record<string, unknown>;
+      const followerIds = (followersRes.data ?? []).map((row) => row.follower_id as string);
+      const followingIds = (followingRes.data ?? []).map((row) => row.following_id as string);
+      const profiles = await fetchPublicProfileMap([...followerIds, ...followingIds]);
+      if (cancelled) return;
+
+      const mapBrief = (id: string): ProfileBrief => {
+        const r = profiles[id] ?? {};
         return {
-          id: r.id as string,
+          id,
           nickname: (r.nickname as string) ?? "ユーザー",
           avatarUrl: (r.avatar_url as string | null) ?? null,
         };
       };
 
-      const fws =
-        (followersRes.data ?? [])
-          .map((row) => mapBrief(row.profiles))
-          .filter(Boolean) as ProfileBrief[];
-      const fos =
-        (followingRes.data ?? [])
-          .map((row) => mapBrief(row.profiles))
-          .filter(Boolean) as ProfileBrief[];
+      const fws = followerIds.map(mapBrief);
+      const fos = followingIds.map(mapBrief);
 
       setFollowers(fws);
       setFollowing(fos);

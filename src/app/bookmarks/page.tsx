@@ -8,7 +8,7 @@ import { AuthGuard } from "@/components/features/AuthGuard";
 import { ReviewCard } from "@/components/features/ReviewCard";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { mapReviewRow } from "@/lib/mappers";
+import { mapReviewRowsWithPublicProfiles } from "@/lib/publicProfiles";
 import type { ReviewWithUser } from "@/types";
 
 function BookmarksContent() {
@@ -25,7 +25,7 @@ function BookmarksContent() {
       /* bookmarks → reviews JOIN */
       const { data } = await supabase
         .from("bookmarks")
-        .select("created_at, reviews!inner(*, profiles(*))")
+        .select("created_at, reviews!inner(*)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(100);
@@ -33,7 +33,7 @@ function BookmarksContent() {
       const rows = (data ?? [])
         .map((b) => b.reviews as unknown as Record<string, unknown> | null)
         .filter(Boolean) as Record<string, unknown>[];
-      setReviews(rows.map((r) => mapReviewRow(r)));
+      setReviews(await mapReviewRowsWithPublicProfiles(rows));
       setLoading(false);
     })();
     return () => {
